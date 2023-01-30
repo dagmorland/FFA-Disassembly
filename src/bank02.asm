@@ -8320,3 +8320,58 @@ memsetTileWithA:
     ld   [HL+], A
     ret
 
+; Draws the 24bit number CHL to dialog position DE
+drawNumber24bitOnWindow:
+    push BC                                            ;; 02:59ae $c5
+    push DE                                            ;; 02:59af $d5
+    push HL                                            ;; 02:59b0 $e5
+    pop  DE                                            ;; 02:59b1 $d1
+    ld   A, C                                          ;; 02:59b2 $79
+    or   A, D                                          ;; 02:59b3 $b2
+    jr   NZ, .not_zero                                 ;; 02:59b4 $20 $11
+    or   A, E                                          ;; 02:59b6 $b3
+    jr   NZ, .not_zero                                 ;; 02:59b7 $20 $0e
+    pop  DE                                            ;; 02:59b9 $d1
+    ld   A, $06                                        ;; 02:59ba $3e $06
+    add  A, E                                          ;; 02:59bc $83
+    ld   E, A                                          ;; 02:59bd $5f
+    xor  A, A                                          ;; 02:59be $af
+    add  A, $30                                        ;; 02:59bf $c6 $30
+    call storeTileAatDialogPositionDE                  ;; 02:59c1 $cd $44 $38
+    pop  BC                                            ;; 02:59c4 $c1
+    inc  E                                             ;; 02:59c5 $1c
+    ret                                                ;; 02:59c6 $c9
+.not_zero:
+    ld   HL, wSRAMSaveHeader._1                        ;; 02:59c7 $21 $a8 $d7
+    push HL                                            ;; 02:59ca $e5
+    call convertToUnpackedBCD                          ;; 02:59cb $cd $63 $29
+    pop  HL                                            ;; 02:59ce $e1
+    inc  HL                                            ;; 02:59cf $23
+    ld   B, $07                                        ;; 02:59d0 $06 $07
+    pop  DE                                            ;; 02:59d2 $d1
+.loop:
+    ld   A, [wMiscFlags]                               ;; 02:59d3 $fa $6f $d8
+    bit  7, A                                          ;; 02:59d6 $cb $7f
+    jr   Z, .jr_02_59e2                                ;; 02:59d8 $28 $08
+    ld   A, [HL+]                                      ;; 02:59da $2a
+    add  A, $30                                        ;; 02:59db $c6 $30
+    call storeTileAatDialogPositionDE                  ;; 02:59dd $cd $44 $38
+    jr   .jr_02_59f3                                   ;; 02:59e0 $18 $11
+.jr_02_59e2:
+    ld   A, [HL+]                                      ;; 02:59e2 $2a
+    and  A, A                                          ;; 02:59e3 $a7
+    jr   Z, .jr_02_59f3                                ;; 02:59e4 $28 $0d
+    add  A, $30                                        ;; 02:59e6 $c6 $30
+    call storeTileAatDialogPositionDE                  ;; 02:59e8 $cd $44 $38
+    ld   A, [wMiscFlags]                               ;; 02:59eb $fa $6f $d8
+    set  7, A                                          ;; 02:59ee $cb $ff
+    ld   [wMiscFlags], A                               ;; 02:59f0 $ea $6f $d8
+.jr_02_59f3:
+    inc  E                                             ;; 02:59f3 $1c
+    dec  B                                             ;; 02:59f4 $05
+    jr   NZ, drawNumber24bitOnDialog.loop              ;; 02:59f5 $20 $dc
+    ld   HL, wMiscFlags                                ;; 02:59f7 $21 $6f $d8
+    res  7, [HL]                                       ;; 02:59fa $cb $be
+    pop  BC                                            ;; 02:59fc $c1
+    ret                                                ;; 02:59fd $c9
+

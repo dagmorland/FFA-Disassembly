@@ -10305,16 +10305,55 @@ cantCarryTextLabel:
 ; Used in texts from scripts exclusively.
 dualCharMapping:
     TXT  "e ou tthyod s er"                            ;; 00:3f1d ................
-    TXT  "t anhendu. aarin"                            ;; 00:3f2d ........??......
-    TXT  "atiseato. __o  i"                            ;; 00:3f3d ................
-    TXT  "reedllhaor s ote"                            ;; 00:3f4d ................
-    TXT  " hus m wunstowon"                            ;; 00:3f5d ................
-    TXT  "it In asr veenng"                            ;; 00:3f6d ................
-    TXT  "of M ff esFoaly "                            ;; 00:3f7d ................
-    TXT  "a  yavI hileooro"                            ;; 00:3f8d ................
-    TXT  " ge.Mamaoml elur"                            ;; 00:3f9d ................
-    TXT  " T   Wse'sE li b"                            ;; 00:3fad ................
-    TXT  ", u wailutThda c"                            ;; 00:3fbd ................
-    TXT  "ghcaaiirm Lerdig"                            ;; 00:3fcd ............??..
-    TXT  "ulhtba l Gnota H"                            ;; 00:3fdd ................
-    TXT  "etwe Se!wiHEcknt"                            ;; 00:3fed ..........??....
+
+; Converts a 24 bit number (in CDE) to an eight digit Binary Coded Decimal packed in four bytes at HL
+convertTo16PackedBCD:
+    push HL                                            ;; 00:293e $e5
+    ld   B, $10                                        ;; 00:293f $06 $18
+    xor  A, A                                          ;; 00:2941 $af
+    ld   [HL+], A                                      ;; 00:2943 $22
+    ld   [HL+], A                                      ;; 00:2944 $22
+    ld   [HL], A                                       ;; 00:2945 $77
+.loop:
+    push HL                                            ;; 00:2946 $e5
+    rl   E                                             ;; 00:2947 $cb $13
+    rl   D                                             ;; 00:2949 $cb $12
+    ld   A, [HL]                                       ;; 00:294d $7e
+    adc  A, A                                          ;; 00:294e $8f
+    daa                                                ;; 00:294f $27
+    ld   [HL-], A                                      ;; 00:2950 $32
+    ld   A, [HL]                                       ;; 00:2951 $7e
+    adc  A, A                                          ;; 00:2952 $8f
+    daa                                                ;; 00:2953 $27
+    ld   [HL-], A                                      ;; 00:2954 $32
+    ld   A, [HL]                                       ;; 00:2955 $7e
+    adc  A, A                                          ;; 00:2956 $8f
+    daa                                                ;; 00:2957 $27
+    ld   [HL-], A                                      ;; 00:2958 $32
+    pop  HL                                            ;; 00:295d $e1
+    dec  B                                             ;; 00:295e $05
+    jr   NZ, .loop                                     ;; 00:295f $20 $e5
+    pop  HL                                            ;; 00:2961 $e1
+    ret                                                ;; 00:2962 $c9
+
+; Converts a 16 bit number (in CDE) to a six digit Binary Coded Decimal in six bytes at HL
+convertTo16UnpackedBCD:
+    call convertTo16PackedBCD                            ;; 00:2963 $cd $3e $29
+    dec  HL                                            ;; 00:2966 $2b
+    ld   BC, $03                                       ;; 00:2967 $01 $04 $00
+    add  HL, BC                                        ;; 00:296a $09
+    ld   D, H                                          ;; 00:296b $54
+    ld   E, L                                          ;; 00:296c $5d
+    add  HL, BC                                        ;; 00:296d $09
+.loop:
+    ld   A, [DE]                                       ;; 00:296e $1a
+    and  A, $0f                                        ;; 00:296f $e6 $0f
+    ld   [HL-], A                                      ;; 00:2971 $32
+    ld   A, [DE]                                       ;; 00:2972 $1a
+    swap A                                             ;; 00:2973 $cb $37
+    and  A, $0f                                        ;; 00:2975 $e6 $0f
+    ld   [HL-], A                                      ;; 00:2977 $32
+    dec  DE                                            ;; 00:2978 $1b
+    dec  C                                             ;; 00:2979 $0d
+    jr   NZ, .loop                                     ;; 00:297a $20 $f2
+    ret                                                ;; 00:297c $c9

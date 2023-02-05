@@ -8103,29 +8103,35 @@ intoScrollText:
     TXT  "<00>"                                        ;; 02:7fd8 ?
     db   $01                                           ;; 02:7fd9 ?
 
-; Draws left aligned number HL as modified tiles at WRAM position DE
+; Draws left aligned number DE as modified tiles at WRAM position HL
 ; C holds the drawing mode in the first nibble (0 for shift, 1 for shift/swap)
 ; C holds number of max digits in the second nibble
 drawLeftAlignedNumberInWRAM:
-    ld   B, $00 ; digit counter
     ; Housekeeping, get a copy of proper WRAM starting
     ;  location on the stack for later use
     push DE
     push BC
-
-    ; Load up the digits on the stack
-.divmod_and_store_number:
-    ld   A, $0a
-    push BC
-    push DE
-    call divMod
-    pop  DE
+    ld   D, H
+    ld   E, L
+    ld   HL, wSRAMSaveHeader._1
+    call convertTo16UnpackedBCD
     pop  BC
-    push AF
+    pop  DE
+    push DE
+    push BC
+
+    ld   B, $06 ; byte counter
+    ld   HL, wSRAMSaveHeader._1
+ .find_digit_loop:
+    ld   A, [HL+]
+    dec  B
+    jr   Z, .get_outta_here
+    and  A, A
+    jr   Z, .find_digit_loop
+
+.get_outta_here:
     inc  B
-    ld   A, H
-    or   A, L
-    jr   NZ, .divmod_and_store_number
+    dec  HL
 
     ; Reduce second nibble of C by num digits found
     ; Remainder provides the number of tiles to clear
@@ -8136,16 +8142,18 @@ drawLeftAlignedNumberInWRAM:
 
     ; Stack holds B digits to pop, transfer them
  .grab_digit_and_transfer:
-    ld   HL, gfxStatusBar+$100 ; start of number tiles
-    pop  AF ; grab digit
+    ld   A, [HL+]
     swap A
     push BC
+    push HL
     ld   B, $00
     ld   C, A
+    ld   HL, gfxStatusBar+$100 ; start of number tiles
     add  HL, BC
     ld   A, BANK(gfxStatusBar)
     ld   B, $10
     call copyAndRotateBankAfromHLtoDE
+    pop  HL
     pop  BC
     dec  B
     jr   NZ, .grab_digit_and_transfer

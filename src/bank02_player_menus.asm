@@ -2296,6 +2296,7 @@ finalizePurchase:
     bit  1, A                                          ;; 02:50d4 $cb $4f
     jr   NZ, .jr_02_5147                               ;; 02:50d6 $20 $6f
     pop  AF                                            ;; 02:50d8 $f1
+    ; it seems the push/pop/ld is useless
     push AF                                            ;; 02:50d9 $f5
     sub  A, $39                                        ;; 02:50da $d6 $39
     ld   C, A                                          ;; 02:50dc $4f

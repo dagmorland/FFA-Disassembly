@@ -68,6 +68,18 @@ entryPointTableBank02:
     call_to_bank_target endFujiStatusEffect            ;; 02:4070 ??
     call_to_bank_target getEquippedArmorElementalResistances ;; 02:4072 pP
 
+debugMsg1:
+IF DEF(RNG_ORIGINAL)
+    db "X %($FF9E)% %($FF05)% %($C0B1)% %($C0B0)%"
+ELIF DEF(RNG_LCG)
+    db "X %($FF9E)% %($FF05)% %($C1CB)% %($C1CC)% %($C1CD)% %($C1CE)%"
+ENDC
+    db $00
+
+debugMsg2:
+    db "Y %($FF9E)% %($FF05)% %($FFA1)% %($FFA0)% %DE%"
+    db $00
+
 ; Each frame this animates one of the tile animation types
 animateTiles:
     ld   A, [wTileAnimationCounter]                    ;; 02:4074 $fa $99 $d3
@@ -8121,29 +8133,6 @@ titleScreenLicenseText:
 ;@ffa_text amount=24
 intoScrollText:
     TXT  "Tree of Mana grows<00>"                      ;; 02:7e8a ...................
-    TXT  "with the energy of<00>"                      ;; 02:7e9d ...................
-    TXT  "will from each and<00>"                      ;; 02:7eb0 ...................
-    TXT  "  every thing of<00>"                        ;; 02:7ec3 .................
-    TXT  "    this world.<00>"                         ;; 02:7ed4 ................
-    TXT  "<00>"                                        ;; 02:7ee4 ?
-    TXT  "  It grows high<00>"                         ;; 02:7ee5 ????????????????
-    TXT  " above the clouds<00>"                       ;; 02:7ef5 ??????????????????
-    TXT  "in the air on top<00>"                       ;; 02:7f07 ??????????????????
-    TXT  "of Mount Illusia.<00>"                       ;; 02:7f19 ??????????????????
-    TXT  "<00>"                                        ;; 02:7f2b ?
-    TXT  "Legend tells that<00>"                       ;; 02:7f2c ??????????????????
-    TXT  "it gives eternal<00>"                        ;; 02:7f3e ?????????????????
-    TXT  "power to the one<00>"                        ;; 02:7f4f ?????????????????
-    TXT  " who touched it.<00>"                        ;; 02:7f60 ?????????????????
-    TXT  "<00>"                                        ;; 02:7f71 ?
-    TXT  "  Dark Lord was<00>"                         ;; 02:7f72 ????????????????
-    TXT  "  trying to find<00>"                        ;; 02:7f82 ????????????????.
-    TXT  "  the way to the<00>"                        ;; 02:7f93 ...........??????
-    TXT  " Tree of Mana to<00>"                        ;; 02:7fa4 ?????????????????
-    TXT  "  get the mighty<00>"                        ;; 02:7fb5 ?????????????????
-    TXT  " power to conquer<00>"                       ;; 02:7fc6 ??????????????????
-    TXT  "    the world.<00>"                          ;; 02:7fd8 ???????????????
     TXT  "<00>"                                        ;; 02:7fe7 ?
-    db   $00, $00, $00, $00, $00, $00, $00, $00        ;; 02:7fe8 ????????
     db   $00, $00, $00, $00, $01, $ff, $ff, $ff        ;; 02:7ff0 ????????
-    db   $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff        ;; 02:7ff8 ????????
+

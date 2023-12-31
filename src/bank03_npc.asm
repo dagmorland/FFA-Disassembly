@@ -4,6 +4,7 @@ INCLUDE "include/hardware.inc"
 INCLUDE "include/macros.inc"
 INCLUDE "include/charmaps.inc"
 INCLUDE "include/constants.inc"
+INCLUDE "include/debug.inc"
 
 SECTION "bank03", ROMX[$4000], BANK[$03]
 
@@ -907,6 +908,7 @@ getRandomTile:
     ret                                                ;; 03:44ec $c9
 
 spawnNpcsFromTable:
+    DBGMSGLOC debugMsg1
     push HL                                            ;; 03:44ed $e5
     push AF                                            ;; 03:44ee $f5
     add  A, A                                          ;; 03:44ef $87
@@ -985,6 +987,7 @@ spawnNpcsFromTable:
     call checkNpcPotentialPlacement                    ;; 03:454e $cd $88 $44
     jr   Z, .random_location                           ;; 03:4551 $28 $f8
     push BC                                            ;; 03:4553 $c5
+    DBGMSGLOC debugMsg2
     call spawnNPC                                      ;; 03:4554 $cd $bd $42
     pop  BC                                            ;; 03:4557 $c1
     dec  B                                             ;; 03:4558 $05

@@ -26,7 +26,10 @@ wMainGameState:
 wMainGameStateFlags:
     ds 1                                               ;; c0a1
 .nextFrame:
-    ds 2                                               ;; c0a2
+    ds 1                                               ;; c0a2
+
+wJoypadInput:
+    ds 1
 
 wOAM_MemoryHighAddress:
     ds 1                                               ;; c0a4
@@ -61,7 +64,7 @@ wVBlankDone:
 wInterruptFiredFlags:
     ds 1                                               ;; c0ae
 
-wJoypadInput:
+wRndState:
     ds 1                                               ;; c0af
 
 wRndState0:

@@ -4,6 +4,7 @@ INCLUDE "include/hardware.inc"
 INCLUDE "include/macros.inc"
 INCLUDE "include/charmaps.inc"
 INCLUDE "include/constants.inc"
+INCLUDE "include/debug.inc"
 
 SECTION "bank00", ROM0[$0000]
     db   $c3, $50, $01                                 ;; 00:0000 ???
@@ -23,8 +24,12 @@ isrLCDC:
 SECTION "isrTimer", ROM0[$0050]
 
 isrTimer:
-    call DummyInterruptHandler                         ;; 00:0050 $cd $87 $00
-    reti                                               ;; 00:0053 $d9
+    push AF ;4/1
+    ldh a, [$ff9e] ;3/2
+    inc a ;1/1
+    ldh [$ff9e], a ;3/2
+    pop AF ;3/1
+    reti ;4/1
 
 SECTION "isrSerial", ROM0[$0058]
 
@@ -5369,8 +5374,10 @@ InitPreIntEnable:
     ld   A, $87                                        ;; 00:2080 $3e $87
     ld   [wVideoLCDC], A                               ;; 00:2082 $ea $a5 $c0
     call initMisc                                      ;; 00:2085 $cd $92 $20
-    ld   A, $03                                        ;; 00:2088 $3e $03
+    ld   A, $07                                        ;; 00:2088 $3e $03
     ldh  [rIE], A                                      ;; 00:208a $e0 $ff
+    ld   HL, $FF07
+    set  2, [HL]
     ld   A, [wVideoLCDC]                               ;; 00:208c $fa $a5 $c0
     ldh  [rLCDC], A                                    ;; 00:208f $e0 $40
     ret                                                ;; 00:2091 $c9
@@ -6611,7 +6618,7 @@ setNpcSpawnTable_trampoline:
 scriptOpCodeSpawnNPC:
     ld   A, [wScriptOpCounter]                         ;; 00:2820 $fa $99 $d4
     cp   A, $00                                        ;; 00:2823 $fe $00
-    call Z, spawnNpcsFromTable_trampoline              ;; 00:2825 $cc $40 $28
+    call Z, doSpawnDance              ;; 00:2825 $cc $40 $28
     ld   A, $01                                        ;; 00:2828 $3e $01
     ld   [wScriptOpCounter], A                         ;; 00:282a $ea $99 $d4
     ld   A, [wTileCopyRequestCount]                    ;; 00:282d $fa $e0 $c8
@@ -6624,8 +6631,85 @@ scriptOpCodeSpawnNPC:
     call getNextScriptInstruction                      ;; 00:283c $cd $27 $37
     ret                                                ;; 00:283f $c9
 
-spawnNpcsFromTable_trampoline:
+doSpawnDance:
     ld   A, [HL+]                                      ;; 00:2840 $2a
+    push BC
+    push AF
+    ldh  A, [rIE]
+    ldh  [$ff9f], A
+    ld   A, 4
+    ldh  [rIE], A
+IF DEF(RNG_ORIGINAL)
+    ld   A, [wRndState0]
+    ldh  [$ffa2], A
+    ld   B, A
+    ld   A, [wRndState1]
+    ldh  [$ffa3], A
+    ld   C, A
+ELIF DEF(RNG_LCG)
+    ld   A, $00
+    ldh  [$ffa2], A
+    ld   B, A
+    ld   A, $00
+    ldh  [$ffa3], A
+    ld   C, A
+ENDC
+    xor  A, A
+    ldh  [$ffa0], A
+    ldh  [$ffa1], A
+    push HL
+.profile_loop:
+    pop  HL
+    pop  AF
+    push AF
+    push HL
+    push BC
+	push DE
+    call spawnNpcsFromTable_trampoline
+	pop DE
+    pop BC
+    ld  A, B
+    ld  [wRndState0], A
+    ld  A, C
+    ld  [wRndState1], A
+IF DEF(RNG_LCG)
+    ld  A, D
+    ld  [wRndState], A
+ENDC	
+    call getRandomByte
+    xor A, A
+    ldh [$ffa0], A
+    ldh [$ffa1], A
+    ld  A, [wRndState0]
+    ld  B, A
+    ld  A, [wRndState1]
+    ld  C, A
+IF DEF(RNG_ORIGINAL)
+    ldh A, [$ffa2]
+    cp  A, B
+    jr nz, .profile_loop
+    ldh A, [$ffa3]
+    cp  A, C
+ELIF DEF(RNG_LCG)
+    ld  A, [wRndState]
+    ld  D, A
+    ldh A, [$ffa2]
+	dec A
+	ldh [$ffa2], A
+    jr nz, .profile_loop
+    ldh A, [$ffa3]
+	dec A
+	ldh [$ffa3], A
+ENDC
+    jr nz, .profile_loop
+    ldh  A, [$ff9f]
+    ldh  [rIE], A
+    pop HL
+    pop AF
+    pop BC
+    ret
+
+spawnNpcsFromTable_trampoline:
     jp_to_bank 03, spawnNpcsFromTable                  ;; 00:2841 $f5 $3e $04 $c3 $35 $1f
 
 setHLToZero_3_trampoline:
@@ -6996,6 +7080,7 @@ getCurrentBankNr:
     ld   A, [HL]                                       ;; 00:2a1c $7e
     ret                                                ;; 00:2a1d $c9
 
+IF DEF(RNG_ORIGINAL)
 rndDataTable:
     db   $c6, $7e, $81, $6b, $4b, $fb, $e2, $54        ;; 00:2a1e ........
     db   $f6, $bd, $df, $7c, $1c, $e1, $87, $01        ;; 00:2a26 ........
@@ -7032,6 +7117,14 @@ rndDataTable:
 
 getRandomByte:
     push DE                                            ;; 00:2b1e $d5
+    ldh  A, [$ffa0]
+    inc  A
+    ldh  [$ffa0], A
+    jr   nz, .skip_extra_inc
+    ldh  A, [$ffa1]
+    inc  A
+    ldh  [$ffa1], A
+.skip_extra_inc:
     ld   A, [wRndState0]                               ;; 00:2b1f $fa $b0 $c0
     inc  A                                             ;; 00:2b22 $3c
     ld   [wRndState0], A                               ;; 00:2b23 $ea $b0 $c0
@@ -7053,6 +7146,43 @@ getRandomByte:
     add  A, [HL]                                       ;; 00:2b3d $86
     pop  DE                                            ;; 00:2b3e $d1
     ret                                                ;; 00:2b3f $c9
+ELIF DEF(RNG_LCG)
+; A linear congruential generator RNG.
+; The original RNG has issues with some values coming up more often than others.
+
+;getRandomByte:
+INCLUDE "code/rand_ffa.asm"
+;    push bc
+;    push de
+;;    ldh  A, [$ffa0]
+;;    inc  A
+;;    ldh  [$ffa0], A
+;;    jr   nz, .skip_extra_inc
+;;    ldh  A, [$ffa1]
+;;    inc  A
+;;    ldh  [$ffa1], A
+;;.skip_extra_inc:
+;INCLUDE "code/rand2.asm"
+    ;DBGMSG "%A% %AF&0080>0% %AF&0040>0% %AF&0020>0% %AF&0010>0%"
+    ;DBGMSG "%AF% %AF&0080%1;0; %AF&0040%1;0; %AF&0020%1;0; %AF&0010%1;0;"
+;    pop de
+;    pop bc
+;    ret
+
+; Free space. The linear congruential generator takes up a lot less space than the original table based method.
+db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
+db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
+db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
+db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
+db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
+db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
+db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
+db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
+db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
+db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
+db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
+db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+ENDC
 
 CopyHL_to_DE_size_BC:
     ld   A, B                                          ;; 00:2b40 $78
@@ -9019,9 +9149,6 @@ getDialogTextInsertionPoint:
     ld   A, [wWindowTextSpaceLeftOnLine]               ;; 00:375f $fa $ba $d8
     ld   C, A                                          ;; 00:3762 $4f
     ret                                                ;; 00:3763 $c9
-    db   $d5, $3e, $7f, $15, $cd, $44, $38, $14        ;; 00:3764 ????????
-    db   $3e, $7f, $cd, $44, $38, $1c, $05, $20        ;; 00:376c ????????
-    db   $f0, $d1, $c9                                 ;; 00:3774 ???
 
 ; Draw text
 ; HL = pointer to text
@@ -9176,8 +9303,6 @@ storeTileAatDialogPositionDE:
     call storeTileAatScreenPositionDE                  ;; 00:3851 $cd $91 $38
     pop  DE                                            ;; 00:3854 $d1
     ret                                                ;; 00:3855 $c9
-    db   $d5, $fa, $a7, $d4, $83, $5f, $fa, $a8        ;; 00:3856 ????????
-    db   $d4, $82, $57, $cd, $a7, $38, $d1, $c9        ;; 00:385e ????????
 
 storeTileAatWindowPositionDE:
     push BC                                            ;; 00:3866 $c5
@@ -9187,8 +9312,6 @@ storeTileAatWindowPositionDE:
     call storeTileAatScreenPositionDE                  ;; 00:386c $cd $91 $38
     pop  BC                                            ;; 00:386f $c1
     ret                                                ;; 00:3870 $c9
-    db   $c5, $cd, $7a, $38, $cd, $a7, $38, $c1        ;; 00:3871 ????????
-    db   $c9                                           ;; 00:3879 ?
 
 windowTilePositionToScreenTilePosition:
     ld   A, [wVideoWY]                                 ;; 00:387a $fa $a9 $c0
@@ -9223,9 +9346,6 @@ storeTileAatScreenPositionDE:
     pop  DE                                            ;; 00:38a4 $d1
     pop  BC                                            ;; 00:38a5 $c1
     ret                                                ;; 00:38a6 $c9
-    db   $c5, $d5, $e5, $cd, $bb, $38, $38, $05        ;; 00:38a7 ????????
-    db   $cd, $85, $04, $18, $03, $cd, $8a, $1d        ;; 00:38af ????????
-    db   $e1, $d1, $c1, $c9                            ;; 00:38b7 ????
 
 ; Convert DE (Y,X) tile position into VRAM memory location if it is on the window.
 ; Carry flag is cleared if the address is on the window, else the carry flag is set.
@@ -10068,11 +10188,6 @@ addMoney:
     ld   [wMoneyLow], A                                ;; 00:3d87 $ea $be $d7
     call drawMoneyOnStatusBarTrampoline                ;; 00:3d8a $cd $17 $31
     ret                                                ;; 00:3d8d $c9
-    db   $d5, $fa, $bf, $d7, $57, $fa, $be, $d7        ;; 00:3d8e ????????
-    db   $5f, $7b, $95, $6f, $7a, $9c, $67, $30        ;; 00:3d96 ????????
-    db   $03, $21, $00, $00, $7c, $ea, $bf, $d7        ;; 00:3d9e ????????
-    db   $7d, $ea, $be, $d7, $cd, $17, $31, $d1        ;; 00:3da6 ????????
-    db   $c9                                           ;; 00:3dae ?
 
 ; The Japanese version did not have the overflow check resulting in high level Flare doing little or no damage
 getTotalMagicPower:
@@ -10112,8 +10227,6 @@ getEquippedElementalResistances:
     or   A, B                                          ;; 00:3ddb $b0
     pop  BC                                            ;; 00:3ddc $c1
     ret                                                ;; 00:3ddd $c9
-    db   $cd, $f9, $30, $c5, $47, $fa, $b6, $d7        ;; 00:3dde ????????
-    db   $80, $c1, $c9                                 ;; 00:3de6 ???
 
 getEquippedWeaponBonusTypes_wrapped:
     call getEquippedWeaponBonusTypes_trampoline        ;; 00:3de9 $cd $f3 $30
@@ -10332,3 +10445,4 @@ dualCharMapping:
     TXT  "ghcaaiirm Lerdig"                            ;; 00:3fcd ............??..
     TXT  "ulhtba l Gnota H"                            ;; 00:3fdd ................
     TXT  "etwe Se!wiHEcknt"                            ;; 00:3fed ..........??....
+

@@ -1580,7 +1580,16 @@ wD8DA:
 
 ; Three bytes long
 wDualCharacterScratch:
-    ds 1829                                            ;; d8db
+    ds 3                                               ;; d8db
+
+; First byte holds number of options (up to 165)
+; Subsequent bytes each provide a spawn location option (y in first nibble, x in second)
+wSpawnPlacementScratch:
+    ds 166
+
+; Unused and ready for future features!
+wUnused:
+    ds 1660
 
 SECTION "hram", HRAM[$ff80]
 

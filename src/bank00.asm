@@ -3857,10 +3857,6 @@ scriptOpWaitWhileMovement:
 ; E = object x tile coordinate
 ; Return: HL = tile attributes
 getRoomMetaTileAttributes:
-    push DE                                            ;; 00:16af $d5
-    ld   A, BANK(metatilesOutdoor) ;@=bank metatilesOutdoor ;; 00:16b0 $3e $08
-    call pushBankNrAndSwitch                           ;; 00:16b2 $cd $fb $29
-    pop  DE                                            ;; 00:16b5 $d1
     ld   A, E                                          ;; 00:16b6 $7b
     cp   A, $14                                        ;; 00:16b7 $fe $14
     jr   C, .jr_00_16c5                                ;; 00:16b9 $38 $0a
@@ -3883,29 +3879,76 @@ getRoomMetaTileAttributes:
 .jr_00_16d4:
     srl  D                                             ;; 00:16d4 $cb $3a
     srl  E                                             ;; 00:16d6 $cb $3b
-    call getRoomMetaTile                               ;; 00:16d8 $cd $26 $24
-    ld   L, A                                          ;; 00:16db $6f
-    ld   H, $00                                        ;; 00:16dc $26 $00
-    ld   D, H                                          ;; 00:16de $54
-    ld   E, L                                          ;; 00:16df $5d
-    add  HL, HL                                        ;; 00:16e0 $29
-    add  HL, DE                                        ;; 00:16e1 $19
-    add  HL, HL                                        ;; 00:16e2 $29
-    ld   A, [wTileDataTablePointer.High]               ;; 00:16e3 $fa $93 $d3
-    ld   D, A                                          ;; 00:16e6 $57
-    ld   A, [wTileDataTablePointer]                    ;; 00:16e7 $fa $92 $d3
-    ld   E, A                                          ;; 00:16ea $5f
-    add  HL, DE                                        ;; 00:16eb $19
-    ld   DE, $04                                       ;; 00:16ec $11 $04 $00
-    add  HL, DE                                        ;; 00:16ef $19
-    ld   A, [HL+]                                      ;; 00:16f0 $2a
-    ld   H, [HL]                                       ;; 00:16f1 $66
-    ld   L, A                                          ;; 00:16f2 $6f
-    push HL                                            ;; 00:16f3 $e5
-    call popBankNrAndSwitch                            ;; 00:16f4 $cd $0a $2a
-    pop  HL                                            ;; 00:16f7 $e1
+    ld HL, wMetatileAttributeCache
+    ld   A, D
+    add  A, A
+    ld   C, A
+    add  A, A
+    add  A, A
+    add  A, C
+    add  A, E
+    ld   E, A
+    ld   D, $00
+    add  HL, DE
+    add  HL, DE
+    ld A, [HL+]
+    ld H, [HL]
+    ld L, A
     ret                                                ;; 00:16f8 $c9
-    db   $cd, $0a, $2a, $21, $00, $00, $c9             ;; 00:16f9 ???????
+
+;; D = object y tile coordinate
+;; E = object x tile coordinate
+;; Return: HL = tile attributes
+;getRoomMetaTileAttributes:
+;    push DE                                            ;; 00:16af $d5
+;    ld   A, BANK(metatilesOutdoor) ;@=bank metatilesOutdoor ;; 00:16b0 $3e $08
+;    call pushBankNrAndSwitch                           ;; 00:16b2 $cd $fb $29
+;    pop  DE                                            ;; 00:16b5 $d1
+;    ld   A, E                                          ;; 00:16b6 $7b
+;    cp   A, $14                                        ;; 00:16b7 $fe $14
+;    jr   C, .jr_00_16c5                                ;; 00:16b9 $38 $0a
+;    bit  7, E                                          ;; 00:16bb $cb $7b
+;    jr   NZ, .jr_00_16c3                               ;; 00:16bd $20 $04
+;    ld   E, $13                                        ;; 00:16bf $1e $13
+;    jr   .jr_00_16c5                                   ;; 00:16c1 $18 $02
+;.jr_00_16c3:
+;    ld   E, $00                                        ;; 00:16c3 $1e $00
+;.jr_00_16c5:
+;    ld   A, D                                          ;; 00:16c5 $7a
+;    cp   A, $10                                        ;; 00:16c6 $fe $10
+;    jr   C, .jr_00_16d4                                ;; 00:16c8 $38 $0a
+;    bit  7, D                                          ;; 00:16ca $cb $7a
+;    jr   NZ, .jr_00_16d2                               ;; 00:16cc $20 $04
+;    ld   D, $0f                                        ;; 00:16ce $16 $0f
+;    jr   .jr_00_16d4                                   ;; 00:16d0 $18 $02
+;.jr_00_16d2:
+;    ld   D, $00                                        ;; 00:16d2 $16 $00
+;.jr_00_16d4:
+;    srl  D                                             ;; 00:16d4 $cb $3a
+;    srl  E                                             ;; 00:16d6 $cb $3b
+;    call getRoomMetaTile                               ;; 00:16d8 $cd $26 $24
+;    ld   L, A                                          ;; 00:16db $6f
+;    ld   H, $00                                        ;; 00:16dc $26 $00
+;    ld   D, H                                          ;; 00:16de $54
+;    ld   E, L                                          ;; 00:16df $5d
+;    add  HL, HL                                        ;; 00:16e0 $29
+;    add  HL, DE                                        ;; 00:16e1 $19
+;    add  HL, HL                                        ;; 00:16e2 $29
+;    ld   A, [wTileDataTablePointer.High]               ;; 00:16e3 $fa $93 $d3
+;    ld   D, A                                          ;; 00:16e6 $57
+;    ld   A, [wTileDataTablePointer]                    ;; 00:16e7 $fa $92 $d3
+;    ld   E, A                                          ;; 00:16ea $5f
+;    add  HL, DE                                        ;; 00:16eb $19
+;    ld   DE, $04                                       ;; 00:16ec $11 $04 $00
+;    add  HL, DE                                        ;; 00:16ef $19
+;    ld   A, [HL+]                                      ;; 00:16f0 $2a
+;    ld   H, [HL]                                       ;; 00:16f1 $66
+;    ld   L, A                                          ;; 00:16f2 $6f
+;    push HL                                            ;; 00:16f3 $e5
+;    call popBankNrAndSwitch                            ;; 00:16f4 $cd $0a $2a
+;    pop  HL                                            ;; 00:16f7 $e1
+;    ret                                                ;; 00:16f8 $c9
+;    db   $cd, $0a, $2a, $21, $00, $00, $c9             ;; 00:16f9 ???????
 
 ; B = object direction bits. If bit 7 is set then the player will not take spike damage.
 ; C = object collision flags
@@ -4275,13 +4318,13 @@ checkTileCollision:
     push HL                                            ;; 00:1910 $e5
     and  A, $07                                        ;; 00:1911 $e6 $07
     cp   A, $00                                        ;; 00:1913 $fe $00
-    jr   Z, .jr_00_192f                                ;; 00:1915 $28 $18
+    jr   Z, .collisionless                             ;; 00:1915 $28 $18
     cp   A, $03                                        ;; 00:1917 $fe $03
     jr   Z, .air                                       ;; 00:1919 $28 $1b
     cp   A, $04                                        ;; 00:191b $fe $04
-    jr   Z, .jr_00_1941                                ;; 00:191d $28 $22
+    jr   Z, .flying_sword                              ;; 00:191d $28 $22
     cp   A, $02                                        ;; 00:191f $fe $02
-    jr   Z, .jr_00_194c                                ;; 00:1921 $28 $29
+    jr   Z, .projectile                                ;; 00:1921 $28 $29
     cp   A, $05                                        ;; 00:1923 $fe $05
     jr   Z, .water                                     ;; 00:1925 $28 $30
     cp   A, $01                                        ;; 00:1927 $fe $01
@@ -4290,7 +4333,7 @@ checkTileCollision:
     pop  DE                                            ;; 00:192c $d1
     xor  A, A                                          ;; 00:192d $af
     ret                                                ;; 00:192e $c9
-.jr_00_192f:
+.collisionless:
     pop  HL                                            ;; 00:192f $e1
     pop  DE                                            ;; 00:1930 $d1
     xor  A, A                                          ;; 00:1931 $af
@@ -4304,14 +4347,14 @@ checkTileCollision:
     pop  DE                                            ;; 00:193d $d1
     ld   B, $00                                        ;; 00:193e $06 $00
     ret                                                ;; 00:1940 $c9
-.jr_00_1941:
+.flying_sword:
     pop  HL                                            ;; 00:1941 $e1
     ld   DE, $200                                      ;; 00:1942 $11 $00 $02
     call HLandDE                                       ;; 00:1945 $cd $b2 $29
     pop  DE                                            ;; 00:1948 $d1
     ld   B, $00                                        ;; 00:1949 $06 $00
     ret                                                ;; 00:194b $c9
-.jr_00_194c:
+.projectile:
     pop  HL                                            ;; 00:194c $e1
     ld   DE, $100                                      ;; 00:194d $11 $00 $01
     call HLandDE                                       ;; 00:1950 $cd $b2 $29
@@ -5662,7 +5705,8 @@ drawDoorMetaTiles:
     push HL                                            ;; 00:229d $e5
     push BC                                            ;; 00:229e $c5
     ld   HL, wRoomTiles                                ;; 00:229f $21 $50 $c3
-    call loadRoomTiles                                 ;; 00:22a2 $cd $74 $1b
+    call cacheMetatileAttributesAndLoadRoomTiles
+    ;call loadRoomTiles                                 ;; 00:22a2 $cd $74 $1b
     pop  BC                                            ;; 00:22a5 $c1
     pop  HL                                            ;; 00:22a6 $e1
     ld   E, [HL]                                       ;; 00:22a7 $5e
@@ -5943,7 +5987,8 @@ setRoomTile:
 .jr_00_241d:
     pop  DE                                            ;; 00:241d $d1
     pop  AF                                            ;; 00:241e $f1
-    call drawMetaTile_immediate                        ;; 00:241f $cd $6c $05
+    call updateMetatileAttributeCache
+    ;call drawMetaTile_immediate                        ;; 00:241f $cd $6c $05
     call popBankNrAndSwitch                            ;; 00:2422 $cd $0a $2a
     ret                                                ;; 00:2425 $c9
 
@@ -6401,7 +6446,8 @@ call_00_2617:
     ld   A, C                                          ;; 00:26b8 $79
     call loadRoomMetaTilesTemplated                    ;; 00:26b9 $cd $5d $25
 .jr_00_26bc:
-    call loadRoomTiles                                 ;; 00:26bc $cd $74 $1b
+    call cacheMetatileAttributesAndLoadRoomTiles
+    ;call loadRoomTiles                                 ;; 00:26bc $cd $74 $1b
     call popBankNrAndSwitch                            ;; 00:26bf $cd $0a $2a
     pop  DE                                            ;; 00:26c2 $d1
     pop  HL                                            ;; 00:26c3 $e1
@@ -6490,7 +6536,8 @@ loadMap:
     ld   A, E                                          ;; 00:2751 $7b
     ld   [wRoomScriptTableLow], A                      ;; 00:2752 $ea $fe $c3
     call loadRoomMetaTilesRLE                          ;; 00:2755 $cd $2b $24
-    call loadRoomTiles                                 ;; 00:2758 $cd $74 $1b
+    call cacheMetatileAttributesAndLoadRoomTiles
+    ;call loadRoomTiles                                 ;; 00:2758 $cd $74 $1b
     call popBankNrAndSwitch                            ;; 00:275b $cd $0a $2a
     ret                                                ;; 00:275e $c9
 .templatedRoom:
@@ -6509,7 +6556,8 @@ loadMap:
     pop  HL                                            ;; 00:2775 $e1
     ld   A, $00                                        ;; 00:2776 $3e $00
     call loadRoomMetaTilesTemplated                    ;; 00:2778 $cd $5d $25
-    call loadRoomTiles                                 ;; 00:277b $cd $74 $1b
+    call cacheMetatileAttributesAndLoadRoomTiles
+    ;call loadRoomTiles                                 ;; 00:277b $cd $74 $1b
     call popBankNrAndSwitch                            ;; 00:277e $cd $0a $2a
     ret                                                ;; 00:2781 $c9
 
@@ -7171,18 +7219,209 @@ INCLUDE "code/rand_ffa.asm"
 ;    ret
 
 ; Free space. The linear congruential generator takes up a lot less space than the original table based method.
-db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
-db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
-db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
-db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
-db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
-db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
-db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
-db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
-db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
-db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
-db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
-db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+;db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
+;db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
+;db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
+;db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
+;db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
+;db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
+;db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
+;db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
+;db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
+;db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
+;db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
+;db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+
+updateMetatileAttributeCache:
+    push AF
+    ld A, BANK(metatilesOutdoor)
+    call pushBankNrAndSwitch
+    pop AF
+    push AF
+    push DE
+    ld L, A
+    ld H, $00
+    ld D, H
+    ld E, L
+    add HL, HL
+    add HL, DE
+    add HL, HL
+    ld A, [wTileDataTablePointer.High]
+    ld D, A
+    ld A, [wTileDataTablePointer]
+    ld E, A
+    add HL, DE
+    ld DE, $04
+    add HL, DE
+    ld A, [HL+]
+    ld B, [HL]
+    ld C, A
+    pop DE
+    push DE
+    push BC
+    ld HL, wMetatileAttributeCache
+    ld   A, D
+    add  A, A
+    ld   C, A
+    add  A, A
+    add  A, A
+    add  A, C
+    add  A, E
+    ld   E, A
+    ld   D, $00
+    add  HL, DE
+    add  HL, DE
+    pop BC
+    ld [HL], C
+    inc HL
+    ld [HL], B
+    call popBankNrAndSwitch
+    pop DE
+    pop AF
+    ld HL, wRoomTiles
+    jp drawMetaTile_immediate
+
+getMetatileAttributesAroundObject:
+    inc D
+    push AF
+    ;and A, $07
+    ;jp Z, noCollision
+    push DE
+    srl D
+    srl E
+    ld   A, D
+    add  A, A
+    ld   L, A
+    add  A, A
+    add  A, A
+    add  A, L
+    add  A, E
+    ld   E, A
+    ld   D, $00
+    ld HL, wMetatileAttributeCache
+    add  HL, DE
+    add  HL, DE
+    pop DE
+    bit 0, E
+    jr Z, .load_just_one_tile
+    push DE
+    ld A, [HL+]
+    ld E, A
+    ld A, [HL+]
+    ld D, A
+    ld A, [HL+]
+    ld H, [HL]
+    and A, E
+    ld L, A
+    ld A, D
+    and A, H
+    ld H, A
+    pop DE
+    jr .finish
+.load_just_one_tile:
+    ld A, [HL+]
+    ld H, [HL]
+    ld L, A
+.finish:
+    pop AF
+    jr checkTileCollisionForSpawn
+
+; A = object collision flags
+; D = y tile coordinate
+; E = x tile coordinate
+; HL = tile attributes
+; Return: Z = collision
+checkTileCollisionForSpawn:
+    and  A, $07
+    cp   A, $01
+    jr   Z, .land
+    cp   A, $03
+    jr   Z, .air
+    cp   A, $05
+    jr   Z, .water
+    cp   A, $00
+    jr   Z, .collisionless
+    xor  A, A
+    ret
+.collisionless:
+    xor  A, A
+    inc  A
+    ret
+.air:
+    ld A, $04
+    and A, H
+    ret
+.water:
+    ld A, $c0
+    and A, L
+    ret Z
+    ld A, $80
+    and A, L
+    jr Z, .water_check_below
+    ld A, $40
+    and A, L
+    ret NZ
+    inc D
+    bit 0, D
+    ret
+.water_check_below:
+    bit 0, D
+    ret
+.land:
+    ld A, $30
+    and A, L
+    ret  Z
+    ld A, $20
+    and A, L
+    jr Z, .land_check_below
+    ld A, $10
+    and A, L
+    ret  NZ
+    inc D
+    bit 0, D
+    ret
+.land_check_below:
+    bit  0, D
+    ret
+
+cacheMetatileAttributesAndLoadRoomTiles:
+    ld A, BANK(metatilesOutdoor)
+    call pushBankNrAndSwitch
+    ld B, $50
+    ld C, $00
+    ld HL, wMetatileAttributeCache
+.loop:
+    push HL
+    ld HL, wRoomTiles
+    ld E, C
+    ld D, $00
+    add HL, DE
+    ld L, [HL]
+    ld H, $00
+    ld D, H
+    ld E, L
+    add HL, HL
+    add HL, DE
+    add HL, HL
+    ld A, [wTileDataTablePointer.High]
+    ld D, A
+    ld A, [wTileDataTablePointer]
+    ld E, A
+    add HL, DE
+    ld DE, $04
+    add HL, DE
+    ld A, [HL+]
+    ld D, [HL]
+    pop HL
+    ld [HL+], A
+    ld [HL], D
+    inc HL
+    inc C
+    dec B
+    jr NZ, .loop
+    call popBankNrAndSwitch
+    ld HL, wRoomTiles
+    jp loadRoomTiles
 ENDC
 
 CopyHL_to_DE_size_BC:

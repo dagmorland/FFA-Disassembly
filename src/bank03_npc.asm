@@ -854,13 +854,13 @@ prepareNpcPlacementOptions:
     pop AF
     push AF
     push DE
-    push BC
     push HL
     inc D
     inc E
-    call checkObjectTileCollisions
+    ;TODO I should be able to skip every other column check since the collision code just checks top/bottom
+    call getMetatileAttributesAroundObject
+    ;call checkObjectTileCollisions
     pop HL
-    pop BC
     pop DE
     jr Z, .loop_continue
     ; Passed the collision test, now check for proximity to player.

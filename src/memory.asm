@@ -1587,9 +1587,12 @@ wDualCharacterScratch:
 wSpawnPlacementScratch:
     ds 166
 
+wMetatileAttributeCache:
+    ds 160
+
 ; Unused and ready for future features!
 wUnused:
-    ds 1660
+    ds 1500
 
 SECTION "hram", HRAM[$ff80]
 

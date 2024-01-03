@@ -1645,7 +1645,13 @@ hSoundEffectLoopCounterChannel1:
 ; END OF AUDIO ENGINE HRAM (ff9e is not included)
 ; One byte long
 hSoundEffectLoopCounterChannel4:
-    ds 93                                              ;; ff9d
+    ds 1                                               ;; ff9d
+
+hScratchPad:
+    ds 91
+
+hScratchSpawnPlacement:
+    ds 1
 
 ; These next three are used as values for signed math. BadBoy understands this, yet still adds them here.
 hUnusedFFFA:

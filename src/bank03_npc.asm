@@ -52,8 +52,9 @@ npcRunBehaviorForAll:
     pop  BC                                            ;; 03:4042 $c1
     dec  B                                             ;; 03:4043 $05
     jr   NZ, .loop                                     ;; 03:4044 $20 $f0
-    call projectileRunLogicForAll_trampoline           ;; 03:4046 $cd $d1 $2b
-    ret                                                ;; 03:4049 $c9
+    jp projectileRunLogicForAll_trampoline           
+    ;call projectileRunLogicForAll_trampoline           ;; 03:4046 $cd $d1 $2b
+    ;ret                                                ;; 03:4049 $c9
 
 ; HL = Npc Runtime Data entry pointer
 npcRunBehavior:
@@ -669,10 +670,11 @@ destroyNPC:
     inc  HL                                            ;; 03:43ac $23
     ld   A, $00                                        ;; 03:43ad $3e $00
     ld   B, $17                                        ;; 03:43af $06 $17
-    call fillMemory                                    ;; 03:43b1 $cd $5d $2b
-    ret                                                ;; 03:43b4 $c9
-    db   $21, $e0, $c4, $06, $0d, $11, $18, $00        ;; 03:43b5 ????????
-    db   $3e, $ff, $77, $19, $05, $20, $fb, $c9        ;; 03:43bd ????????
+    jp fillMemory
+    ;call fillMemory                                    ;; 03:43b1 $cd $5d $2b
+    ;ret                                                ;; 03:43b4 $c9
+    ;db   $21, $e0, $c4, $06, $0d, $11, $18, $00        ;; 03:43b5 ????????
+    ;db   $3e, $ff, $77, $19, $05, $20, $fb, $c9        ;; 03:43bd ????????
 
 giveFollower:
     ld   C, A                                          ;; 03:43c5 $4f
@@ -686,8 +688,9 @@ giveFollower:
     call destroyNPC                                    ;; 03:43d3 $cd $5f $43
     pop  DE                                            ;; 03:43d6 $d1
     pop  BC                                            ;; 03:43d7 $c1
-    call spawnNPC                                      ;; 03:43d8 $cd $bd $42
-    ret                                                ;; 03:43db $c9
+    jp spawnNPC
+    ;call spawnNPC                                      ;; 03:43d8 $cd $bd $42
+    ;ret                                                ;; 03:43db $c9
 
 npcLoadTiles:
     ld   L, A                                          ;; 03:43dc $6f
@@ -849,14 +852,23 @@ prepareNpcPlacementOptions:
     ; Loop over position potentials and check for suitability
     ld D, $0b ;number of y positions to check
 .loop_outer:
-    ld E, $0f ;number of x positions to check
+
+    xor A, A
+    ldh [hScratchSpawnPlacement], A
+    ;ld E, $0f ;number of x positions to check
+    ld E, $08 ;number of x positions to check
 .loop_inner:
     pop AF
     push AF
     push DE
     push HL
     inc D
-    inc E
+    ld L, A
+    ld A, E
+    add A, A
+    ld E, A
+    ld A, L
+    ;inc E
     ;TODO I should be able to skip every other column check since the collision code just checks top/bottom
     call getMetatileAttributesAroundObject
     ;call checkObjectTileCollisions
@@ -867,6 +879,18 @@ prepareNpcPlacementOptions:
     ; NPC cannot be placed within 4 tile positions of the player.
     ; Given sprites are 2 tiles wide, this translate to requiring
     ; NPCs to be at least 1 metatile apart from the player.
+    ldh A, [hScratchSpawnPlacement]
+    add A, E
+.proximity_test:
+    add A, E
+    ld E, A
+    sub  A, C
+    jr   NC, .tile_right
+    cpl
+    inc  A
+.tile_right:
+    cp   A, $04
+    jr   NC, .far_enough_away
     ld   A, D
     inc  A
     sub  A, B
@@ -875,23 +899,27 @@ prepareNpcPlacementOptions:
     inc  A
 .tile_below:
     cp   A, $04
-    jr   NC, .far_enough_away
-    ld   A, E
-    inc  A
-    sub  A, C
-    jr   NC, .tile_right
-    cpl
-    inc  A
-.tile_right:
-    cp   A, $04
-    jr C, .loop_continue
+    jr C, .check_right_8px_neighbor
 .far_enough_away:
     ; Store DE into the left and right nibble of A
     ld A, D
     swap A
     add E
+    dec A
     ld [HL+], A
+.check_right_8px_neighbor:
+    ldh A, [hScratchSpawnPlacement]
+    dec A
+    jr NZ, .finish_no_collision
+    dec E
+    ldh [hScratchSpawnPlacement], A
+    jr .proximity_test
+.finish_no_collision:
+    xor A, A
+    inc A
+    srl E
 .loop_continue:
+    ldh [hScratchSpawnPlacement], A
     dec E
     jr NZ, .loop_inner
     dec D
@@ -1054,9 +1082,9 @@ spawnNpcsFromTable:
     ld   C, A                                          ;; 03:450d $4f
     ; BC holds min and max-min spawn quantity
     ; push/pop BC unnecessary
-    push BC                                            ;; 03:450e $c5
+    ;push BC                                            ;; 03:450e $c5
     call getRandomByte                                 ;; 03:450f $cd $1e $2b
-    pop  BC                                            ;; 03:4512 $c1
+    ;pop  BC                                            ;; 03:4512 $c1
     inc  C                                             ;; 03:4513 $0c
     ld   L, C                                          ;; 03:4514 $69
     ld   H, $00                                        ;; 03:4515 $26 $00
@@ -2113,16 +2141,19 @@ getNpcElementalImmunities:
     ret                                                ;; 03:4aec $c9
 
 moveGridlessObject_3:
-    call moveGridlessObject                            ;; 03:4aed $cd $d4 $08
-    ret                                                ;; 03:4af0 $c9
+    jp moveGridlessObject
+    ;call moveGridlessObject                            ;; 03:4aed $cd $d4 $08
+    ;ret                                                ;; 03:4af0 $c9
 
 updateObjectPosition_3:
-    call updateObjectPosition                          ;; 03:4af1 $cd $11 $06
-    ret                                                ;; 03:4af4 $c9
+    jp updateObjectPosition
+    ;call updateObjectPosition                          ;; 03:4af1 $cd $11 $06
+    ;ret                                                ;; 03:4af4 $c9
 
 processPhysicsForObject_3:
-    call processPhysicsForObject                       ;; 03:4af5 $cd $95 $06
-    ret                                                ;; 03:4af8 $c9
+    jp processPhysicsForObject
+    ;call processPhysicsForObject                       ;; 03:4af5 $cd $95 $06
+    ;ret                                                ;; 03:4af8 $c9
 
 ; C = npc number
 ; DE = YX coordinates

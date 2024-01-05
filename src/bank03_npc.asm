@@ -936,20 +936,62 @@ prepareNpcPlacementOptions:
     ret
 
 selectRandomNpcPlacement:
-   ld HL, wSpawnPlacementScratch
-   ld A, [HL+]
-   push HL
-   push AF
    call getRandomByte
    ld L, A
    ld H, $00
-   pop AF
-   push BC
+   ld A, [wSpawnPlacementScratch]
    call MultiplyHL_by_A
-   pop BC
-   ld E, H
+   ld DE, wSpawnPlacementScratch+1
+   ld L, H
+   ld H, $00
+   add HL, DE
+   ld A, [HL]
+   and A, $0f
+   ld E, A
+   inc E
+   ld A, [HL]
+   swap A
+   and A, $0f
+   ld D, A
+   inc D
+   ret
+
+; a more clever way would be to put two
+; random bytes into HL, list size in A,
+; then figure out how to modify the multiply
+; to get out bits 23-16
+selectRandomNpcPlacement2:
+   ld A, [wSpawnPlacementScratch]
+   ld C, A
+   call getRandomByte
+   ld L, C
+   ld H, $00
+   call MultiplyHL_by_A
+   ld B, H
+   call getRandomByte
+   ld L, C
+   ld H, $00
+   ld C, B
+   call MultiplyHL_by_A
+   add C
+   ld C, A
+   ld HL, wSpawnPlacementScratch
+   ld A, [HL+]
+   jr NC, .no_carry
+   cpl
+   inc A
+   add C
+   jr .finish_modulo
+.no_carry:
+   ld B, A
+   ld A, C
+   cp A, B
+   jr NC, .finish_modulo
+   sub A, B
+.finish_modulo:
+   ld E, A
    ld D, $00
-   pop HL
+   inc HL
    add HL, DE
    ld A, [HL]
    and A, $0f

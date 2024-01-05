@@ -7487,6 +7487,25 @@ callJumptable:
     jp   HL                                            ;; 00:2b73 $e9
     db   $29, $54, $5d, $29, $29, $19, $c9             ;; 00:2b74 ???????
 
+MultiplyHL_by_A_24bit:
+    ld   E, L                                          ;; 00:2b7b $5d
+    ld   D, H                                          ;; 00:2b7c $54
+    ld   HL, $00                                       ;; 00:2b7d $21 $00 $00
+    ld   B, $08                                        ;; 00:2b80 $06 $08
+    ld C, A
+    xor A, A
+.loop:
+    add  HL, HL                                        ;; 00:2b82 $29
+    adc A, A
+    rlc C
+    jr   NC, .jr_00_2b87                               ;; 00:2b84 $30 $01
+    add  HL, DE                                        ;; 00:2b86 $19
+    adc A, $00
+.jr_00_2b87:
+    dec  B                                             ;; 00:2b87 $05
+    jr   NZ, .loop                                     ;; 00:2b88 $20 $f8
+    ret                                                ;; 00:2b8a $c9
+
 MultiplyHL_by_A:
     ld   E, L                                          ;; 00:2b7b $5d
     ld   D, H                                          ;; 00:2b7c $54

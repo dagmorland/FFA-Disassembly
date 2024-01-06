@@ -956,10 +956,6 @@ selectRandomNpcPlacement:
    inc D
    ret
 
-; a more clever way would be to put two
-; random bytes into HL, list size in A,
-; then figure out how to modify the multiply
-; to get out bits 23-16
 selectRandomNpcPlacement2:
    ld A, [wSpawnPlacementScratch]
    ld C, A
@@ -993,6 +989,24 @@ selectRandomNpcPlacement2:
    ld D, $00
    inc HL
    add HL, DE
+   ld A, [HL]
+   and A, $0f
+   ld E, A
+   inc E
+   ld A, [HL]
+   swap A
+   and A, $0f
+   ld D, A
+   inc D
+   ret
+
+selectRandomNpcPlacement3:
+   ld A, [wSpawnPlacementScratch]
+   ld C, A
+   call getRandomInRange
+   ld C, A
+   ld HL, wSpawnPlacementScratch+1
+   add HL, BC
    ld A, [HL]
    and A, $0f
    ld E, A

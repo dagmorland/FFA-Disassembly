@@ -7487,24 +7487,44 @@ callJumptable:
     jp   HL                                            ;; 00:2b73 $e9
     db   $29, $54, $5d, $29, $29, $19, $c9             ;; 00:2b74 ???????
 
-MultiplyHL_by_A_24bit:
-    ld   E, L                                          ;; 00:2b7b $5d
-    ld   D, H                                          ;; 00:2b7c $54
-    ld   HL, $00                                       ;; 00:2b7d $21 $00 $00
-    ld   B, $08                                        ;; 00:2b80 $06 $08
-    ld C, A
+; Get a uniform random number on [0,C)
+; Output:
+;  A = pseudo-uniform random value from [0,C)
+;  DE = uniform random value on [0, 65536) correlated with A
+;  B = 0
+;  C unchanged
+;  HL lower bits of DE*C
+getRandomInRange:
+    call getRandomByte
+    ld E, A
+    call getRandomByte
+    ld D, A
+    call MultiplyDE_by_C_24bit
+    ret
+
+
+; Input DE and C
+; Output:
+;  A = bits 23-16 of DE*C
+;  HL = bits 15-0 of DE*C
+;  B = 0
+;  C, DE unchanged
+MultiplyDE_by_C_24bit:
+    ld B, $08
     xor A, A
+    ld H, A
+    ld L, A
 .loop:
-    add  HL, HL                                        ;; 00:2b82 $29
+    add HL, HL
     adc A, A
     rlc C
-    jr   NC, .jr_00_2b87                               ;; 00:2b84 $30 $01
-    add  HL, DE                                        ;; 00:2b86 $19
+    jr NC, .continue
+    add HL, DE
     adc A, $00
-.jr_00_2b87:
-    dec  B                                             ;; 00:2b87 $05
-    jr   NZ, .loop                                     ;; 00:2b88 $20 $f8
-    ret                                                ;; 00:2b8a $c9
+.continue:
+    dec B
+    jr NZ, .loop
+    ret
 
 MultiplyHL_by_A:
     ld   E, L                                          ;; 00:2b7b $5d

@@ -826,9 +826,9 @@ setNpcSpawnTable:
 prepareNpcPlacementOptions:
     call prepareForPrepare
     push DE
+    ld HL, wMetatileAttributeCache+137
 .loop_outer:
-    inc H
-    ld B, A
+    inc B
 
     ; Reset 'tile to the right is collisionless' flag in C bit 3
     res 3, C
@@ -836,7 +836,8 @@ prepareNpcPlacementOptions:
     ; Do proximity check in y direction, store result in C bit 2
     res 2, C
     pop DE
-    ld A, H
+    push AF
+    ld A, B
     sub A, D
     jr NC, .tile_below
     cpl
@@ -846,34 +847,12 @@ prepareNpcPlacementOptions:
     jr C, .too_close
     set 2, C
 .too_close:
+    pop AF
     push DE
     ; D is not useful until we return, put in collision flags
     ld D, C
 
-    ld L, $10 ; number of x positions to check
-    push HL
-
-    ; load metatile attr address of right column of current row in HL
-    push DE
-    inc H ; makes sure it is loading the ground tile under the sprite
-    srl H
-    srl L
-    ld   A, H
-    add  A, A
-    ld   E, A
-    add  A, A
-    add  A, A
-    add  A, E
-    add  A, L
-    ld   E, A
-    ld   D, $00
-    ld HL, wMetatileAttributeCache
-    add  HL, DE
-    add  HL, DE
-    inc HL
-    pop DE
-    ld A, B
-    pop BC
+    ld C, $10 ; number of x positions to check
 
     push HL
 .loop_inner:
@@ -903,10 +882,19 @@ prepareNpcPlacementOptions:
     ; swap first bit of D
     inc D
     res 1, D
-    dec B
-    dec B
-    ld H, B
     ld C, D
+    bit 0, C
+    jr Z, .go_back_one_row
+    ; increase metatile attr pointer by 16
+    ld DE, $0010
+    jr .continue_outer_loop
+.go_back_one_row:
+    ; reduce metatile attr pointer by 4
+    ld DE, $fffc
+.continue_outer_loop:
+    add HL, DE
+    dec B
+    dec B
     jr NZ, .loop_outer
     pop DE
     ld [wSpawnPlacementScratch], A

@@ -7401,14 +7401,13 @@ prepareForPrepare:
     call getObjectNearestTilePosition
     pop BC
 
-    ; Keep track of number of placements found in B
-    ld B, $00
+    ; Keep track of number of placements found in A
+    xor A, A
     ; Load the first spawn placement location into HL
     ;ld HL, wSpawnPlacementScratch+1
 
     ; Loop over position potentials and check for suitability
-    ld H, $0b ; number of y positions to check
-    xor A, A
+    ld B, $0b ; number of y positions to check
     ret
 
 loopInnards:

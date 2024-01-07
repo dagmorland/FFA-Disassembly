@@ -7232,6 +7232,44 @@ INCLUDE "code/rand_ffa.asm"
 ;db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
 ;db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
 
+; Get a uniform random number on [0,C)
+; Output:
+;  A = pseudo-uniform random value from [0,C)
+;  DE = uniform random value on [0, 65536) correlated with A
+;  B = 0
+;  C unchanged
+;  HL lower bits of DE*C
+getRandomInRange:
+    call getRandomByte
+    ld E, A
+    call getRandomByte
+    ld D, A
+    call MultiplyDE_by_C_24bit
+    ret
+
+; Input DE and C
+; Output:
+;  A = bits 23-16 of DE*C
+;  HL = bits 15-0 of DE*C
+;  B = 0
+;  C, DE unchanged
+MultiplyDE_by_C_24bit:
+    ld B, $08
+    xor A, A
+    ld H, A
+    ld L, A
+.loop:
+    add HL, HL
+    adc A, A
+    rlc C
+    jr NC, .continue
+    add HL, DE
+    adc A, $00
+.continue:
+    dec B
+    jr NZ, .loop
+    ret
+
 updateMetatileAttributeCache:
     push AF
     ld A, BANK(metatilesOutdoor)
@@ -7487,45 +7525,12 @@ callJumptable:
     jp   HL                                            ;; 00:2b73 $e9
     db   $29, $54, $5d, $29, $29, $19, $c9             ;; 00:2b74 ???????
 
-; Get a uniform random number on [0,C)
+; Input HL and A
 ; Output:
-;  A = pseudo-uniform random value from [0,C)
-;  DE = uniform random value on [0, 65536) correlated with A
+;  HL = bits 15-0 of HL*A
+;  A, C unchanged
+;  DE = Input HL
 ;  B = 0
-;  C unchanged
-;  HL lower bits of DE*C
-getRandomInRange:
-    call getRandomByte
-    ld E, A
-    call getRandomByte
-    ld D, A
-    call MultiplyDE_by_C_24bit
-    ret
-
-
-; Input DE and C
-; Output:
-;  A = bits 23-16 of DE*C
-;  HL = bits 15-0 of DE*C
-;  B = 0
-;  C, DE unchanged
-MultiplyDE_by_C_24bit:
-    ld B, $08
-    xor A, A
-    ld H, A
-    ld L, A
-.loop:
-    add HL, HL
-    adc A, A
-    rlc C
-    jr NC, .continue
-    add HL, DE
-    adc A, $00
-.continue:
-    dec B
-    jr NZ, .loop
-    ret
-
 MultiplyHL_by_A:
     ld   E, L                                          ;; 00:2b7b $5d
     ld   D, H                                          ;; 00:2b7c $54

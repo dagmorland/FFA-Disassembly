@@ -936,71 +936,6 @@ prepareNpcPlacementOptions:
     ret
 
 selectRandomNpcPlacement:
-   call getRandomByte
-   ld L, A
-   ld H, $00
-   ld A, [wSpawnPlacementScratch]
-   call MultiplyHL_by_A
-   ld DE, wSpawnPlacementScratch+1
-   ld L, H
-   ld H, $00
-   add HL, DE
-   ld A, [HL]
-   and A, $0f
-   ld E, A
-   inc E
-   ld A, [HL]
-   swap A
-   and A, $0f
-   ld D, A
-   inc D
-   ret
-
-selectRandomNpcPlacement2:
-   ld A, [wSpawnPlacementScratch]
-   ld C, A
-   call getRandomByte
-   ld L, C
-   ld H, $00
-   call MultiplyHL_by_A
-   ld B, H
-   call getRandomByte
-   ld L, C
-   ld H, $00
-   ld C, B
-   call MultiplyHL_by_A
-   add C
-   ld C, A
-   ld HL, wSpawnPlacementScratch
-   ld A, [HL+]
-   jr NC, .no_carry
-   cpl
-   inc A
-   add C
-   jr .finish_modulo
-.no_carry:
-   ld B, A
-   ld A, C
-   cp A, B
-   jr NC, .finish_modulo
-   sub A, B
-.finish_modulo:
-   ld E, A
-   ld D, $00
-   inc HL
-   add HL, DE
-   ld A, [HL]
-   and A, $0f
-   ld E, A
-   inc E
-   ld A, [HL]
-   swap A
-   and A, $0f
-   ld D, A
-   inc D
-   ret
-
-selectRandomNpcPlacement3:
    ld A, [wSpawnPlacementScratch]
    ld C, A
    call getRandomInRange
@@ -1197,17 +1132,19 @@ spawnNpcsFromTable:
     call prepareNpcPlacementOptions
     pop BC
 .random_loop:
+    push BC
     call selectRandomNpcPlacement
+    pop BC
     ;call getRandomTile                                 ;; 03:454b $cd $cd $44
     ;call checkNpcPotentialPlacement                    ;; 03:454e $cd $88 $44
     ;jr   Z, .random_location                           ;; 03:4551 $28 $f8
     push BC                                            ;; 03:4553 $c5
-    DBGMSGLOC debugMsg2
     call spawnNPC                                      ;; 03:4554 $cd $bd $42
     pop  BC                                            ;; 03:4557 $c1
     dec  B                                             ;; 03:4558 $05
     jr   NZ, .random_loop                              ;; 03:4559 $20 $f0
     pop  HL                                            ;; 03:455b $e1
+    DBGMSGLOC debugMsg2
     ret                                                ;; 03:455c $c9
 
 setHLToZero_3:

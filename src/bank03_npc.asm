@@ -824,115 +824,92 @@ setNpcSpawnTable:
 ; C = NPC type
 ; Make a list of NPC placement options in the interval y [02,0c] and x [02,10]
 prepareNpcPlacementOptions:
-    ; Get object collision flag based on NPC type, put it in A
-    ld   A, C
-    ld   L, A
-    ld   H, $00
-    ld   E, L
-    ld   D, H
-    add  HL, DE
-    add  HL, DE
-    add  HL, HL
-    add  HL, HL
-    add  HL, HL
-    ld   DE, npcDataTable
-    add  HL, DE
-    ld   A, [HL]
-
-    ; Get player position in BC
-    ld   C, $04
-    push AF
-    call getObjectNearestTilePosition
-    ld B, D
-    ld C, E
-
-    ; Load the first spawn placement location into HL
-    ld HL, wSpawnPlacementScratch+1
-
-    ; Loop over position potentials and check for suitability
-    ld D, $0b ;number of y positions to check
-.loop_outer:
-
-    xor A, A
-    ldh [hScratchSpawnPlacement], A
-    ;ld E, $0f ;number of x positions to check
-    ld E, $08 ;number of x positions to check
-.loop_inner:
-    pop AF
-    push AF
+    call prepareForPrepare
     push DE
-    push HL
-    inc D
-    ld L, A
-    ld A, E
-    add A, A
-    ld E, A
-    ld A, L
-    ;inc E
-    ;TODO I should be able to skip every other column check since the collision code just checks top/bottom
-    call getMetatileAttributesAroundObject
-    ;call checkObjectTileCollisions
-    pop HL
+.loop_outer:
+    inc H
+    ld B, A
+
+    ; Reset 'tile to the right is collisionless' flag in C bit 3
+    res 3, C
+
+    ; Do proximity check in y direction, store result in C bit 2
+    res 2, C
     pop DE
-    jr Z, .loop_continue
-    ; Passed the collision test, now check for proximity to player.
-    ; NPC cannot be placed within 4 tile positions of the player.
-    ; Given sprites are 2 tiles wide, this translate to requiring
-    ; NPCs to be at least 1 metatile apart from the player.
-    ldh A, [hScratchSpawnPlacement]
-    add A, E
-.proximity_test:
-    add A, E
-    ld E, A
-    sub  A, C
-    jr   NC, .tile_right
-    cpl
-    inc  A
-.tile_right:
-    cp   A, $04
-    jr   NC, .far_enough_away
-    ld   A, D
-    inc  A
-    sub  A, B
-    jr   NC, .tile_below
+    ld A, H
+    sub A, D
+    jr NC, .tile_below
     cpl
     inc  A
 .tile_below:
-    cp   A, $04
-    jr C, .check_right_8px_neighbor
-.far_enough_away:
-    ; Store DE into the left and right nibble of A
-    ld A, D
-    swap A
-    add E
-    dec A
-    ld [HL+], A
-.check_right_8px_neighbor:
-    ldh A, [hScratchSpawnPlacement]
-    dec A
-    jr NZ, .finish_no_collision
-    dec E
-    ldh [hScratchSpawnPlacement], A
-    jr .proximity_test
-.finish_no_collision:
-    xor A, A
-    inc A
-    srl E
-.loop_continue:
-    ldh [hScratchSpawnPlacement], A
-    dec E
-    jr NZ, .loop_inner
-    dec D
-    jr NZ, .loop_outer
+    cp A, $04
+    jr C, .too_close
+    set 2, C
+.too_close:
+    push DE
+    ; D is not useful until we return, put in collision flags
+    ld D, C
+
+    ld L, $10 ; number of x positions to check
+    push HL
+
+    ; load metatile attr address of right column of current row in HL
+    push DE
+    inc H ; makes sure it is loading the ground tile under the sprite
+    srl H
+    srl L
+    ld   A, H
+    add  A, A
+    ld   E, A
+    add  A, A
+    add  A, A
+    add  A, E
+    add  A, L
+    ld   E, A
+    ld   D, $00
+    ld HL, wMetatileAttributeCache
+    add  HL, DE
+    add  HL, DE
+    inc HL
+    pop DE
+    ld A, B
+    pop BC
+
+    push HL
+.loop_inner:
+    pop HL
+    push AF
+    push BC
+    ld A, [HL-]
+    ld B, A
+    ld A, [HL-]
+    ld C, A
+    call checkSpawnCollision
+    pop BC
+    jr Z, .no_innards
     pop AF
-
-    ; Store the quantity of found locations at the front of the buffer
-    ld DE, wSpawnPlacementScratch
-    dec HL
-    call sub_HL_DE
-    ld A, L
+    push HL
+    call loopInnards
+    jr .keep_going
+.no_innards
+    pop AF
+    push HL
+    res 3, D
+.keep_going:
+    dec C
+    dec C
+    jr NZ, .loop_inner
+    pop HL
+    ; swap first bit of D
+    inc D
+    res 1, D
+    dec B
+    dec B
+    ld H, B
+    ld C, D
+    jr NZ, .loop_outer
+    pop DE
     ld [wSpawnPlacementScratch], A
-
     ret
 
 selectRandomNpcPlacement:
@@ -1043,7 +1020,6 @@ selectRandomNpcPlacement:
 ;    ret                                                ;; 03:44ec $c9
 
 spawnNpcsFromTable:
-    DBGMSGLOC debugMsg1
     push HL                                            ;; 03:44ed $e5
     push AF                                            ;; 03:44ee $f5
     add  A, A                                          ;; 03:44ef $87
@@ -1129,7 +1105,9 @@ spawnNpcsFromTable:
     ret                                                ;; 03:454a $c9
 .random_location:
     push BC
+    DBGMSGLOC debugMsg1
     call prepareNpcPlacementOptions
+    DBGMSGLOC debugMsg2
     pop BC
 .random_loop:
     push BC

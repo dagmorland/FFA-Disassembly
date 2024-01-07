@@ -7319,108 +7319,231 @@ updateMetatileAttributeCache:
     ld HL, wRoomTiles
     jp drawMetaTile_immediate
 
-getMetatileAttributesAroundObject:
-    inc D
-    push AF
-    ;and A, $07
-    ;jp Z, noCollision
-    push DE
-    srl D
-    srl E
-    ld   A, D
-    add  A, A
-    ld   L, A
-    add  A, A
-    add  A, A
-    add  A, L
-    add  A, E
-    ld   E, A
-    ld   D, $00
-    ld HL, wMetatileAttributeCache
-    add  HL, DE
-    add  HL, DE
-    pop DE
-    bit 0, E
-    jr Z, .load_just_one_tile
-    push DE
-    ld A, [HL+]
-    ld E, A
-    ld A, [HL+]
-    ld D, A
-    ld A, [HL+]
-    ld H, [HL]
-    and A, E
-    ld L, A
-    ld A, D
-    and A, H
-    ld H, A
-    pop DE
-    jr .finish
-.load_just_one_tile:
-    ld A, [HL+]
-    ld H, [HL]
-    ld L, A
-.finish:
-    pop AF
-    jr checkTileCollisionForSpawn
+;getMetatileAttributesAroundObject:
+;    inc D
+;    push AF
+;    ;and A, $07
+;    ;jp Z, noCollision
+;    push DE
+;    srl D
+;    srl E
+;    ld   A, D
+;    add  A, A
+;    ld   L, A
+;    add  A, A
+;    add  A, A
+;    add  A, L
+;    add  A, E
+;    ld   E, A
+;    ld   D, $00
+;    ld HL, wMetatileAttributeCache
+;    add  HL, DE
+;    add  HL, DE
+;    pop DE
+;    bit 0, E
+;    jr Z, .load_just_one_tile
+;    push DE
+;    ld A, [HL+]
+;    ld E, A
+;    ld A, [HL+]
+;    ld D, A
+;    ld A, [HL+]
+;    ld H, [HL]
+;    and A, E
+;    ld L, A
+;    ld A, D
+;    and A, H
+;    ld H, A
+;    pop DE
+;    jr .finish
+;.load_just_one_tile:
+;    ld A, [HL+]
+;    ld H, [HL]
+;    ld L, A
+;.finish:
+;    pop AF
+;    jr checkTileCollisionForSpawn
 
-; A = object collision flags
-; D = y tile coordinate
-; E = x tile coordinate
-; HL = tile attributes
-; Return: Z = collision
-checkTileCollisionForSpawn:
-    and  A, $07
-    cp   A, $01
-    jr   Z, .land
-    cp   A, $03
-    jr   Z, .air
-    cp   A, $05
-    jr   Z, .water
-    cp   A, $00
-    jr   Z, .collisionless
-    xor  A, A
-    ret
-.collisionless:
-    xor  A, A
-    inc  A
-    ret
-.air:
-    ld A, $04
-    and A, H
-    ret
+prepareForPrepare:
+    ; Get object collision flag based on NPC type, put it in A
+    ld A, C
+    ld L, A
+    ld H, $00
+    ld E, L
+    ld D, H
+    add HL, DE
+    add HL, DE
+    add HL, HL
+    add HL, HL
+    add HL, HL
+    ld DE, npcDataTable
+    add HL, DE
+    ld A, [HL]
+
+    ; Save collision information based on type in C
+    and A, $07
+    cp A, $01
+    jr Z, .land
+    cp A, $05
+    jr Z, .water
+    ld C, $00
+    jr .typing_done
 .water:
-    ld A, $c0
-    and A, L
-    ret Z
-    ld A, $80
-    and A, L
-    jr Z, .water_check_below
-    ld A, $40
-    and A, L
-    ret NZ
-    inc D
-    bit 0, D
-    ret
-.water_check_below:
-    bit 0, D
-    ret
+    ld C, $80
+    jr .typing_done
 .land:
-    ld A, $30
-    and A, L
-    ret  Z
-    ld A, $20
-    and A, L
-    jr Z, .land_check_below
-    ld A, $10
-    and A, L
-    ret  NZ
-    inc D
-    bit 0, D
+    ld C, $20
+.typing_done:
+
+    ; Get player position in DE
+    push BC
+    ld C, $04
+    call getObjectNearestTilePosition
+    pop BC
+
+    ; Keep track of number of placements found in B
+    ld B, $00
+    ; Load the first spawn placement location into HL
+    ;ld HL, wSpawnPlacementScratch+1
+
+    ; Loop over position potentials and check for suitability
+    ld H, $0b ; number of y positions to check
+    xor A, A
     ret
-.land_check_below:
-    bit  0, D
+
+loopInnards:
+    ld HL, wSpawnPlacementScratch+1
+    push DE
+    ld E, A
+    ld D, $00
+    add HL, DE
+    pop DE
+    push AF
+
+    ; Passed the collision test, now check for proximity to player.
+    ; NPC cannot be placed within 4 tile positions of the player.
+    ; Given sprites are 2 tiles wide, this translate to requiring
+    ; NPCs to be at least 1 metatile apart from the player.
+    bit 3, D
+    set 3, D
+    jr Z, .proximity_test
+    inc C
+    set 1, D ; signifies we are looking at the right neighbor
+.proximity_test:
+    bit 2, D
+    jr NZ, .far_enough_away
+    ld A, C
+    sub A, E
+    jr NC, .tile_right
+    cpl
+    inc  A
+.tile_right:
+    cp A, $04
+    jr C, .check_8px_neighbor
+.far_enough_away:
+    ; Store HL into the left and right nibble of A
+    ld A, B
+    dec A
+    swap A
+    add C
+    dec A
+    ld [HL+], A
+    pop AF
+    inc A
+    push AF
+.check_8px_neighbor:
+    bit 1, D
+    jr Z, .loop_continue
+    dec C
+    res 1, D
+    jr .proximity_test
+.loop_continue:
+    pop AF
     ret
+
+
+checkSpawnCollision:
+    ld A, D
+    and A, $f0
+    jr Z, .air_collision_check
+    ld B, A
+    rrca
+    add A, B
+    and A, C
+    ret Z
+    ld A, B
+    and A, C
+    jr Z, .check_y_pos
+    rrca
+    and A, C
+    ret NZ
+    inc A
+.check_y_pos:
+    add A, D
+    bit 0, A
+    ret
+.air_collision_check:
+    ld A, $04
+    and A, B
+    ret
+
+;; A = object collision flags
+;; D = y tile coordinate
+;; E = x tile coordinate
+;; HL = tile attributes
+;; Return: Z = collision
+;checkTileCollisionForSpawn:
+;    and  A, $07
+;    cp   A, $01
+;    jr   Z, .land
+;    cp   A, $03
+;    jr   Z, .air
+;    cp   A, $05
+;    jr   Z, .water
+;    cp   A, $00
+;    jr   Z, .collisionless
+;    xor  A, A
+;    ret
+;.collisionless:
+;    xor  A, A
+;    inc  A
+;    ret
+;.air:
+;    ld A, $04
+;    and A, H
+;    ret
+;.water:
+;    ld A, $c0
+;    and A, L
+;    ret Z
+;    ld A, $80
+;    and A, L
+;    jr Z, .water_check_below
+;    ld A, $40
+;    and A, L
+;    ret NZ
+;    inc D
+;    bit 0, D
+;    ret
+;.water_check_below:
+;    bit 0, D
+;    ret
+;.land:
+;    ld A, $30
+;    and A, L
+;    ret  Z
+;    ld A, $20
+;    and A, L
+;    jr Z, .land_check_below
+;    ld A, $10
+;    and A, L
+;    ret  NZ
+;    inc D
+;    bit 0, D
+;    ret
+;.land_check_below:
+;    bit  0, D
+;    ret
 
 cacheMetatileAttributesAndLoadRoomTiles:
     ld A, BANK(metatilesOutdoor)

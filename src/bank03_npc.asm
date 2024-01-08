@@ -826,63 +826,10 @@ setNpcSpawnTable:
 prepareNpcPlacementOptions:
     call prepareForPrepare
     push DE
-    ld HL, wMetatileAttributeCache+137
+    ld HL, wMetatileAttributeCache+141
 .loop_outer:
     inc B
 
-    ; Reset 'tile to the right is collisionless' flag in C bit 3
-    res 3, C
-
-    ; Do proximity check in y direction, store result in C bit 2
-    res 2, C
-    pop DE
-    push AF
-    ld A, B
-    sub A, D
-    jr NC, .tile_below
-    cpl
-    inc  A
-.tile_below:
-    cp A, $04
-    jr C, .too_close
-    set 2, C
-.too_close:
-    pop AF
-    push DE
-    ; D is not useful until we return, put in collision flags
-    ld D, C
-
-    ld C, $10 ; number of x positions to check
-
-    push HL
-.loop_inner:
-    pop HL
-    push AF
-    push BC
-    ld A, [HL-]
-    ld B, A
-    ld A, [HL-]
-    ld C, A
-    call checkSpawnCollision
-    pop BC
-    jr Z, .no_innards
-    pop AF
-    push HL
-    call loopInnards
-    jr .keep_going
-.no_innards
-    pop AF
-    push HL
-    res 3, D
-.keep_going:
-    dec C
-    dec C
-    jr NZ, .loop_inner
-    pop HL
-    ; swap first bit of D
-    inc D
-    res 1, D
-    ld C, D
     bit 0, C
     jr Z, .go_back_one_row
     ; increase metatile attr pointer by 16
@@ -893,11 +840,56 @@ prepareNpcPlacementOptions:
     ld DE, $fffc
 .continue_outer_loop:
     add HL, DE
+
+    ; Reset 'tile to the right is collisionless' flag in C bit 3
+    res 3, C
+
+    ; Do proximity check in y direction, store result in C bit 2
+    res 2, C
+    pop DE
+    ld A, B
+    sub A, D
+    bit 7, D
+    jr NZ, .tile_below
+    jr NC, .tile_below
+    cpl
+    inc  A
+.tile_below:
+    cp A, $04
+    jr C, .too_close
+    set 2, C
+.too_close:
+    push DE
+    ; D is not useful until we return, put in collision flags
+    ld D, C
+
+    ld C, $10 ; number of x positions to check
+
+.loop_inner:
+    push BC
+    ld A, [HL-]
+    ld B, A
+    ld A, [HL-]
+    ld C, A
+    call checkSpawnCollision
+    pop BC
+    jr Z, .no_innards
+    call loopInnards
+    jr .keep_going
+.no_innards
+    res 3, D
+.keep_going:
+    dec C
+    dec C
+    jr NZ, .loop_inner
+    ; swap first bit of D
+    inc D
+    res 1, D
+    ld C, D
     dec B
     dec B
     jr NZ, .loop_outer
     pop DE
-    ld [wSpawnPlacementScratch], A
     ret
 
 selectRandomNpcPlacement:

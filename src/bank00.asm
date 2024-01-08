@@ -7401,24 +7401,15 @@ prepareForPrepare:
     call getObjectNearestTilePosition
     pop BC
 
-    ; Keep track of number of placements found in A
+    ; Reset number of placements found
     xor A, A
-    ; Load the first spawn placement location into HL
-    ;ld HL, wSpawnPlacementScratch+1
+    ld [wSpawnPlacementScratch], A
 
     ; Loop over position potentials and check for suitability
     ld B, $0b ; number of y positions to check
     ret
 
 loopInnards:
-    ld HL, wSpawnPlacementScratch+1
-    push DE
-    ld E, A
-    ld D, $00
-    add HL, DE
-    pop DE
-    push AF
-
     ; Passed the collision test, now check for proximity to player.
     ; NPC cannot be placed within 4 tile positions of the player.
     ; Given sprites are 2 tiles wide, this translate to requiring
@@ -7433,6 +7424,8 @@ loopInnards:
     jr NZ, .far_enough_away
     ld A, C
     sub A, E
+    bit 7, E
+    jr NZ, .tile_right
     jr NC, .tile_right
     cpl
     inc  A
@@ -7441,25 +7434,29 @@ loopInnards:
     jr C, .check_8px_neighbor
 .far_enough_away:
     ; Store HL into the left and right nibble of A
+    push HL
+    ld HL, wSpawnPlacementScratch
+    push DE
+    ld E, [HL]
+    inc E
+    ld [HL], E
+    ld D, $00
+    add HL, DE
+    pop DE
+
     ld A, B
     dec A
     swap A
     add C
     dec A
-    ld [HL+], A
-    pop AF
-    inc A
-    push AF
+    ld [HL], A
+    pop HL
 .check_8px_neighbor:
     bit 1, D
-    jr Z, .loop_continue
+    ret Z
     dec C
     res 1, D
     jr .proximity_test
-.loop_continue:
-    pop AF
-    ret
-
 
 checkSpawnCollision:
     ld A, D

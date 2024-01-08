@@ -7433,17 +7433,18 @@ loopInnards:
     cp A, $04
     jr C, .check_8px_neighbor
 .far_enough_away:
-    ; Store HL into the left and right nibble of A
     push HL
     ld HL, wSpawnPlacementScratch
-    push DE
-    ld E, [HL]
-    inc E
-    ld [HL], E
-    ld D, $00
-    add HL, DE
-    pop DE
+    ld A, [HL]
+    inc A
+    ld [HL], A
+    add A, L
+    ld L, A
+    jr NC, .ready_to_write
+    inc H
+.ready_to_write:
 
+    ; Store tile position minus 1 into the left and right nibble of placement array
     ld A, B
     dec A
     swap A

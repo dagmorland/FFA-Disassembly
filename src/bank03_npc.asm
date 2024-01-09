@@ -830,23 +830,19 @@ prepareNpcPlacementOptions:
 .loop_outer:
     inc B
 
-    bit 0, C
-    jr Z, .go_back_one_row
-    ; increase metatile attr pointer by 16
-    ld DE, $0010
-    jr .continue_outer_loop
-.go_back_one_row:
     ; reduce metatile attr pointer by 4
     ld DE, $fffc
-.continue_outer_loop:
     add HL, DE
 
-    ; Reset 'tile to the right is collisionless' flag in C bit 3
-    res 3, C
+    ; Reset proximity checks in y direction in C bit 0/1
+    ; Reset 'tile to the right is collisionless' flag in C bit 2/3
+    ld A, C
+    and A, $f0
+    ld C, A
 
-    ; Do proximity check in y direction, store result in C bit 2
-    res 2, C
+    ; Do proximity checks in y direction
     pop DE
+.start_y_prox_check:
     ld A, B
     sub A, D
     bit 7, D
@@ -856,14 +852,23 @@ prepareNpcPlacementOptions:
     inc  A
 .tile_below:
     cp A, $04
-    jr C, .too_close
+    bit 0, B
+    jr Z, .check_and_loop
+    jr C, .y_prox_check_complete
     set 2, C
-.too_close:
+    jr .y_prox_check_complete
+.check_and_loop:
+    dec B
+    jr C, .y_prox_check_complete
+    set 3, C
+    jr .start_y_prox_check
+    
+.y_prox_check_complete:
     push DE
     ; D is not useful until we return, put in collision flags
     ld D, C
 
-    ld C, $10 ; number of x positions to check
+    ld C, $10 ; starting x position on the right
 
 .loop_inner:
     ld A, [HL-]

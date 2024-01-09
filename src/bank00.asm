@@ -7468,17 +7468,19 @@ checkSpawnCollision:
     ld A, H
     and A, L
     jr Z, .check_y_pos
+    set 1, D
     rrca
     and A, L
-    ret NZ
-    inc A
+    ret Z
 .check_y_pos:
-    add A, D
-    bit 0, A
+    set 0, D
     ret
 .air_collision_check:
     ld A, $04
     and A, H
+    ret Z
+    set 0, D
+    set 1, D
     ret
 
 ;; A = object collision flags

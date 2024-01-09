@@ -7434,9 +7434,9 @@ loopInnards:
     jr C, .check_8px_neighbor
 .far_enough_away:
     ld HL, wSpawnPlacementScratch
-    ld A, [HL+]
     inc [HL]
-    add A, L
+    ld A, L
+    add A, [HL]
     ld L, A
     jr NC, .ready_to_write
     inc H

@@ -7433,11 +7433,9 @@ loopInnards:
     cp A, $04
     jr C, .check_8px_neighbor
 .far_enough_away:
-    push HL
     ld HL, wSpawnPlacementScratch
-    ld A, [HL]
-    inc A
-    ld [HL], A
+    ld A, [HL+]
+    inc [HL]
     add A, L
     ld L, A
     jr NC, .ready_to_write
@@ -7451,7 +7449,6 @@ loopInnards:
     add C
     dec A
     ld [HL], A
-    pop HL
 .check_8px_neighbor:
     bit 1, D
     ret Z
@@ -7463,16 +7460,16 @@ checkSpawnCollision:
     ld A, D
     and A, $f0
     jr Z, .air_collision_check
-    ld B, A
+    ld H, A
     rrca
-    add A, B
-    and A, C
+    add A, H
+    and A, L
     ret Z
-    ld A, B
-    and A, C
+    ld A, H
+    and A, L
     jr Z, .check_y_pos
     rrca
-    and A, C
+    and A, L
     ret NZ
     inc A
 .check_y_pos:
@@ -7481,7 +7478,7 @@ checkSpawnCollision:
     ret
 .air_collision_check:
     ld A, $04
-    and A, B
+    and A, H
     ret
 
 ;; A = object collision flags

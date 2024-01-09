@@ -866,19 +866,19 @@ prepareNpcPlacementOptions:
     ld C, $10 ; number of x positions to check
 
 .loop_inner:
-    push BC
     ld A, [HL-]
-    ld B, A
-    ld A, [HL-]
-    ld C, A
+    push HL
+    ld L, [HL]
+    ld H, A
     call checkSpawnCollision
-    pop BC
     jr Z, .no_innards
     call loopInnards
     jr .keep_going
 .no_innards
     res 3, D
 .keep_going:
+    pop HL
+    dec HL
     dec C
     dec C
     jr NZ, .loop_inner

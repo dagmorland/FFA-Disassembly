@@ -825,25 +825,28 @@ setNpcSpawnTable:
 ; Make a list of NPC placement options in the interval y [02,0c] and x [02,10]
 prepareNpcPlacementOptions:
     call prepareForPrepare
-    push DE
     ld HL, wMetatileAttributeCache+141
 .loop_outer:
     inc B
 
     ; reduce metatile attr pointer by 4
-    ld DE, $fffc
-    add HL, DE
+    ld A, L
+    sub A, $04
+    ld L, A
+    jr NC, .no_sub_carry
+    dec H
+.no_sub_carry:
+;    ld DE, $fffc
+;    add HL, DE
 
     ; Reset proximity checks in y direction in C bit 0/1
     ; Reset 'tile to the right is collisionless' flag in C bit 2/3
-    ld A, C
-    and A, $f0
-    ld C, A
+    ld C, $00
 
     ; Do proximity checks in y direction
-    pop DE
 .start_y_prox_check:
     ld A, B
+    and A, $0f
     sub A, D
     bit 7, D
     jr NZ, .tile_below
@@ -866,35 +869,61 @@ prepareNpcPlacementOptions:
 .y_prox_check_complete:
     push DE
     ; D is not useful until we return, put in collision flags
-    ld D, C
+    ld A, C
+    swap A ; both top and bottom nibble should have prox and collision flags
+    add A, C
+    ld D, A
 
     ld C, $10 ; starting x position on the right
-
 .loop_inner:
     ld A, [HL-]
     push HL
     ld L, [HL]
     ld H, A
     call checkSpawnCollision
-    jr Z, .no_innards
+    jr Z, .keep_going
     call loopInnards
-    jr .keep_going
-.no_innards
-    res 3, D
 .keep_going:
     pop HL
     dec HL
+
+    res 0, D
+    res 1, D
+
+    ; move bits 7/6 from B to 1/0 in D
+    ; srl D
+    ; srl D
+    ; ld A, B
+    ; rla
+    ; rl D
+    ; rla
+    ; rl D
+    ; rra
+    ; rra
+    ; ld B, A
+
     dec C
     dec C
     jr NZ, .loop_inner
-    ; swap first bit of D
-    inc D
-    res 1, D
-    ld C, D
     dec B
     dec B
+    ld A, B
+    and A, $0f
     jr NZ, .loop_outer
-    pop DE
+
+    ld DE, wSpawnPlacementScratch
+    ld HL, SP
+    call sub_HL_DE
+    ld A, L
+    rr H
+    rra
+    ld [DE], A
+
+    ld HL, wStackPointerBackupLow
+    ld A, [HL+]
+    ld H, [HL]
+    ld L, A
+    ld SP, HL
     ret
 
 selectRandomNpcPlacement:

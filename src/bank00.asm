@@ -956,8 +956,8 @@ getObjectNearestTilePosition:
     add  HL, HL                                        ;; 00:05f3 $29
     add  HL, HL                                        ;; 00:05f4 $29
     add  HL, HL                                        ;; 00:05f5 $29
-    ld   BC, wObjectRuntimeData                        ;; 00:05f6 $01 $00 $c2
-    add  HL, BC                                        ;; 00:05f9 $09
+    ld   DE, wObjectRuntimeData
+    add  HL, DE
     ld   DE, $04                                       ;; 00:05fa $11 $04 $00
     add  HL, DE                                        ;; 00:05fd $19
     ld   A, [HL+]                                      ;; 00:05fe $2a
@@ -7386,27 +7386,34 @@ prepareForPrepare:
     jr Z, .land
     cp A, $05
     jr Z, .water
-    ld C, $00
+    ld B, $00
     jr .typing_done
 .water:
-    ld C, $80
+    ld B, $80
     jr .typing_done
 .land:
-    ld C, $20
+    ld B, $20
 .typing_done:
 
     ; Get player position in DE
-    push BC
     ld C, $04
     call getObjectNearestTilePosition
-    pop BC
 
-    ; Reset number of placements found
-    xor A, A
-    ld [wSpawnPlacementScratch], A
+    ; Backup stack pointer, we will be using the stack operations to speed up function processing
+    ld [wStackPointerBackupLow], SP
+
+    ; Store the player Y position at the start of the scratch array for easy access
+    ld HL, wSpawnPlacementScratch
+    ld A, D
+    ld [HL+], A
+
+    ; Load in the scratch location into the stack pointer for fast writes
+    ld SP, HL
 
     ; Loop over position potentials and check for suitability
-    ld B, $0b ; number of y positions to check
+    ld A, $0b ; number of y positions to check
+    add A, B
+    ld B, A
     ret
 
 loopInnards:
@@ -7414,12 +7421,9 @@ loopInnards:
     ; NPC cannot be placed within 4 tile positions of the player.
     ; Given sprites are 2 tiles wide, this translate to requiring
     ; NPCs to be at least 1 metatile apart from the player.
-    bit 3, D
-    set 3, D
-    jr Z, .proximity_test
-    inc C
-    set 1, D ; signifies we are looking at the right neighbor
 .proximity_test:
+    bit 0, D
+    jr Z, .check_next
     bit 2, D
     jr NZ, .far_enough_away
     ld A, C
@@ -7431,12 +7435,12 @@ loopInnards:
     inc  A
 .tile_right:
     cp A, $04
-    jr C, .check_8px_neighbor
+    jr C, .check_next
 .far_enough_away:
     ld HL, wSpawnPlacementScratch
-    ld A, [HL+]
     inc [HL]
-    add A, L
+    ld A, L
+    add A, [HL]
     ld L, A
     jr NC, .ready_to_write
     inc H
@@ -7446,18 +7450,36 @@ loopInnards:
     ld A, B
     dec A
     swap A
+    and A, $f0
     add C
     dec A
     ld [HL], A
-.check_8px_neighbor:
-    bit 1, D
-    ret Z
-    dec C
-    res 1, D
+.check_next:
+    bit 0, B
+    jr NZ, .continue_y
+    inc B
+    rrc D
     jr .proximity_test
+.continue_y:
+    bit 0, C
+    jr NZ, .complete_check
+    dec B
+    inc C
+    rlc D
+    ld A, D
+    swap D
+    or A, $f0
+    and A, D
+    ld D, A
+    jr .proximity_test
+.complete_check:
+    dec B
+    dec C
+    rlc D
+    ret
 
 checkSpawnCollision:
-    ld A, D
+    ld A, B
     and A, $f0
     jr Z, .air_collision_check
     ld H, A
@@ -7473,14 +7495,14 @@ checkSpawnCollision:
     and A, L
     ret Z
 .check_y_pos:
-    set 0, D
+    inc D ; faster than set 0, D
     ret
 .air_collision_check:
     ld A, $04
     and A, H
     ret Z
-    set 0, D
     set 1, D
+    inc D
     ret
 
 ;; A = object collision flags

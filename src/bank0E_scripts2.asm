@@ -6185,7 +6185,10 @@ prepareNpcPlacementOptions:
 
     ; Store the player Y position at the start of the scratch array for easy access
     ld HL, wSpawnPlacementScratch
-    ld [HL], D
+    ld A, D
+    ld [HL+], A
+    ld [HL], E
+    ld E, B
 
     ; Backup stack pointer, we will be using the stack operations to speed up function processing
     ld [wStackPointerBackupLow], SP
@@ -6197,9 +6200,7 @@ prepareNpcPlacementOptions:
     ld SP, HL
 
     ; Loop over position potentials and check for suitability
-    ld A, $0c ; number of y positions to check
-    add A, B
-    ld B, A
+    ld B, $0c ; number of y positions to check
 
     ; C should be 0 to start to speed up loop instructions
     ld C, $00
@@ -6224,15 +6225,13 @@ prepareNpcPlacementOptions:
 
     ; Do proximity checks in y direction
 .start_y_prox_check:
-    ld A, B
-    and A, $0f
-    sub A, C
-    bit 7, C
-    jr NZ, .tile_below
-    jr NC, .tile_below
+    ld A, C
+    sub A, B
+    bit 7, A
+    jr Z, .tile_above_player
     cpl
     inc  A
-.tile_below:
+.tile_above_player:
     cp A, $04
     bit 0, B
     jr Z, .check_and_loop
@@ -6254,17 +6253,15 @@ prepareNpcPlacementOptions:
 
     ld C, $10 ; starting x position on the right
 .loop_inner:
-    ld A, B
-    and A, $f0
+    ld A, E
+    and A, A
     jr Z, .air_collision_check
     rrca
-    add A, B
-    and A, $f0
+    add A, E
     dec HL
     and A, [HL]
     jr Z, .finish_collision_check
-    ld A, B
-    and A, $f0
+    ld A, E
     and A, [HL]
     jr Z, .bottom_half_open
     set 1, D ; top half open
@@ -6285,7 +6282,6 @@ prepareNpcPlacementOptions:
 .finish_collision_check:
     dec HL
     ld A, B
-    and A, $0f
     cp A, $02
     jr NZ, .perform_prox_check
     res 1, D
@@ -6302,14 +6298,13 @@ prepareNpcPlacementOptions:
     jr Z, .check_next
     bit 2, D
     jr NZ, .far_enough_away
-    ld A, C
-    sub A, E
-    bit 7, E
-    jr NZ, .tile_right
-    jr NC, .tile_right
+    ld A, [wSpawnPlacementScratch+1]
+    sub A, C
+    bit 7, A
+    jr Z, .tile_left_of_player
     cpl
     inc  A
-.tile_right:
+.tile_left_of_player:
     cp A, $04
     jr C, .check_next
 .far_enough_away:
@@ -6349,8 +6344,6 @@ prepareNpcPlacementOptions:
     jr NZ, .loop_inner
     dec B
     dec B
-    ld A, B
-    and A, $0f
     jp NZ, .loop_outer
 
     ld HL, SP+0

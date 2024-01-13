@@ -932,6 +932,7 @@ selectRandomNpcPlacement:
 ;    ret                                                ;; 03:44ec $c9
 
 spawnNpcsFromTable:
+    DBGMSGLOC debugMsg1
     push HL                                            ;; 03:44ed $e5
     push AF                                            ;; 03:44ee $f5
     add  A, A                                          ;; 03:44ef $87
@@ -1017,7 +1018,6 @@ spawnNpcsFromTable:
     ret                                                ;; 03:454a $c9
 .random_location:
     push BC
-    DBGMSGLOC debugMsg1
     ; Get object collision flag based on NPC type, put it in A
     ld A, C
     ld L, A

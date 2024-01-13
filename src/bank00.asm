@@ -4308,6 +4308,64 @@ noCollision:
     cp   A, $01                                        ;; 00:190c $fe $01
     ret                                                ;; 00:190e $c9
 
+;; A = object collision flags
+;; D = y tile coordinate
+;; E = x tile coordinate
+;; HL = tile attributes
+;; Return: Z = collision
+;checkTileCollisionForSpawn:
+;    and  A, $07
+;    cp   A, $01
+;    jr   Z, .land
+;    cp   A, $03
+;    jr   Z, .air
+;    cp   A, $05
+;    jr   Z, .water
+;    cp   A, $00
+;    jr   Z, .collisionless
+;    xor  A, A
+;    ret
+;.collisionless:
+;    xor  A, A
+;    inc  A
+;    ret
+;.air:
+;    ld A, $04
+;    and A, H
+;    ret
+;.water:
+;    ld A, $c0
+;    and A, L
+;    ret Z
+;    ld A, $80
+;    and A, L
+;    jr Z, .water_check_below
+;    ld A, $40
+;    and A, L
+;    ret NZ
+;    inc D
+;    bit 0, D
+;    ret
+;.water_check_below:
+;    bit 0, D
+;    ret
+;.land:
+;    ld A, $30
+;    and A, L
+;    ret  Z
+;    ld A, $20
+;    and A, L
+;    jr Z, .land_check_below
+;    ld A, $10
+;    and A, L
+;    ret  NZ
+;    inc D
+;    bit 0, D
+;    ret
+;.land_check_below:
+;    bit  0, D
+;    ret
+
 ; A = object collision flags
 ; D = y tile coordinate
 ; E = x tile coordinate
@@ -7218,20 +7276,6 @@ INCLUDE "code/rand_ffa.asm"
 ;    pop bc
 ;    ret
 
-; Free space. The linear congruential generator takes up a lot less space than the original table based method.
-;db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
-;db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
-;db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
-;db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
-;db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
-;db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
-;db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
-;db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
-;db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
-;db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
-;db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
-;db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
-
 ; Get a uniform random number on [0,C)
 ; Output:
 ;  A = pseudo-uniform random value from [0,C)
@@ -7319,139 +7363,6 @@ updateMetatileAttributeCache:
     ld HL, wRoomTiles
     jp drawMetaTile_immediate
 
-;getMetatileAttributesAroundObject:
-;    inc D
-;    push AF
-;    ;and A, $07
-;    ;jp Z, noCollision
-;    push DE
-;    srl D
-;    srl E
-;    ld   A, D
-;    add  A, A
-;    ld   L, A
-;    add  A, A
-;    add  A, A
-;    add  A, L
-;    add  A, E
-;    ld   E, A
-;    ld   D, $00
-;    ld HL, wMetatileAttributeCache
-;    add  HL, DE
-;    add  HL, DE
-;    pop DE
-;    bit 0, E
-;    jr Z, .load_just_one_tile
-;    push DE
-;    ld A, [HL+]
-;    ld E, A
-;    ld A, [HL+]
-;    ld D, A
-;    ld A, [HL+]
-;    ld H, [HL]
-;    and A, E
-;    ld L, A
-;    ld A, D
-;    and A, H
-;    ld H, A
-;    pop DE
-;    jr .finish
-;.load_just_one_tile:
-;    ld A, [HL+]
-;    ld H, [HL]
-;    ld L, A
-;.finish:
-;    pop AF
-;    jr checkTileCollisionForSpawn
-
-callFunctionInBank0E:
-    ld   [wScratchBankCallFunctionNumber], A           ;; 00:1f06 $ea $b2 $c0
-    pop  AF                                            ;; 00:1f09 $f1
-    ld   [wScratchBankCallA], A                        ;; 00:1f0a $ea $b3 $c0
-    ld   A, H                                          ;; 00:1f0d $7c
-    ld   [wScratchBankCallH], A                        ;; 00:1f0e $ea $b5 $c0
-    ld   A, L                                          ;; 00:1f11 $7d
-    ld   [wScratchBankCallL], A                        ;; 00:1f12 $ea $b4 $c0
-    ld   HL, returnFromBankCall                        ;; 00:1f15 $21 $c2 $1f
-    push HL                                            ;; 00:1f18 $e5
-    ld   A, BANK(entryPointTableBank0E) ;@=bank entryPointTableBank02 ;; 00:1f19 $3e $02
-    call pushBankNrAndSwitch                           ;; 00:1f1b $cd $fb $29
-    ld   A, [wScratchBankCallFunctionNumber]           ;; 00:1f1e $fa $b2 $c0
-    add  A, A                                          ;; 00:1f21 $87
-    ld   L, A                                          ;; 00:1f22 $6f
-    ld   H, $40                                        ;; 00:1f23 $26 $40
-    ld   A, [HL+]                                      ;; 00:1f25 $2a
-    ld   H, [HL]                                       ;; 00:1f26 $66
-    ld   L, A                                          ;; 00:1f27 $6f
-    push HL                                            ;; 00:1f28 $e5
-    ld   A, [wScratchBankCallH]                        ;; 00:1f29 $fa $b5 $c0
-    ld   H, A                                          ;; 00:1f2c $67
-    ld   A, [wScratchBankCallL]                        ;; 00:1f2d $fa $b4 $c0
-    ld   L, A                                          ;; 00:1f30 $6f
-    ld   A, [wScratchBankCallA]                        ;; 00:1f31 $fa $b3 $c0
-    ret                                                ;; 00:1f34 $c9
-
-prepareNpcPlacementOptions_trampoline:
-    jp_to_bank 0E, prepareNpcPlacementOptions
-
-;; A = object collision flags
-;; D = y tile coordinate
-;; E = x tile coordinate
-;; HL = tile attributes
-;; Return: Z = collision
-;checkTileCollisionForSpawn:
-;    and  A, $07
-;    cp   A, $01
-;    jr   Z, .land
-;    cp   A, $03
-;    jr   Z, .air
-;    cp   A, $05
-;    jr   Z, .water
-;    cp   A, $00
-;    jr   Z, .collisionless
-;    xor  A, A
-;    ret
-;.collisionless:
-;    xor  A, A
-;    inc  A
-;    ret
-;.air:
-;    ld A, $04
-;    and A, H
-;    ret
-;.water:
-;    ld A, $c0
-;    and A, L
-;    ret Z
-;    ld A, $80
-;    and A, L
-;    jr Z, .water_check_below
-;    ld A, $40
-;    and A, L
-;    ret NZ
-;    inc D
-;    bit 0, D
-;    ret
-;.water_check_below:
-;    bit 0, D
-;    ret
-;.land:
-;    ld A, $30
-;    and A, L
-;    ret  Z
-;    ld A, $20
-;    and A, L
-;    jr Z, .land_check_below
-;    ld A, $10
-;    and A, L
-;    ret  NZ
-;    inc D
-;    bit 0, D
-;    ret
-;.land_check_below:
-;    bit  0, D
-;    ret
-
 cacheMetatileAttributesAndLoadRoomTiles:
     ld A, BANK(metatilesOutdoor)
     call pushBankNrAndSwitch
@@ -7490,6 +7401,37 @@ cacheMetatileAttributesAndLoadRoomTiles:
     call popBankNrAndSwitch
     ld HL, wRoomTiles
     jp loadRoomTiles
+
+callFunctionInBank0E:
+    ld   [wScratchBankCallFunctionNumber], A
+    pop  AF
+    ld   [wScratchBankCallA], A
+    ld   A, H
+    ld   [wScratchBankCallH], A
+    ld   A, L
+    ld   [wScratchBankCallL], A
+    ld   HL, returnFromBankCall
+    push HL
+    ld   A, BANK(entryPointTableBank0E)
+    call pushBankNrAndSwitch
+    ld   A, [wScratchBankCallFunctionNumber]
+    add  A, A
+    ld   L, A
+    ld   H, $40
+    ld   A, [HL+]
+    ld   H, [HL]
+    ld   L, A
+    push HL
+    ld   A, [wScratchBankCallH]
+    ld   H, A
+    ld   A, [wScratchBankCallL]
+    ld   L, A
+    ld   A, [wScratchBankCallA]
+    ret
+
+prepareNpcPlacementOptions_trampoline:
+    jp_to_bank 0E, prepareNpcPlacementOptions
+
 ENDC
 
 CopyHL_to_DE_size_BC:

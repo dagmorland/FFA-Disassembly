@@ -821,127 +821,25 @@ setNpcSpawnTable:
     pop  HL                                            ;; 03:4486 $e1
     ret                                                ;; 03:4487 $c9
 
-; C = NPC type
-; Make a list of NPC placement options in the interval y [02,0c] and x [02,10]
-prepareNpcPlacementOptions:
-    call prepareForPrepare
-    ld HL, wMetatileAttributeCache+141
-.loop_outer:
-    inc B
-
-    ; reduce metatile attr pointer by 4
-    ld A, L
-    sub A, $04
-    ld L, A
-    jr NC, .no_sub_carry
-    dec H
-.no_sub_carry:
-;    ld DE, $fffc
-;    add HL, DE
-
-    ; Reset proximity checks in y direction in C bit 0/1
-    ; Reset 'tile to the right is collisionless' flag in C bit 2/3
-    ld C, $00
-
-    ; Do proximity checks in y direction
-.start_y_prox_check:
-    ld A, B
-    and A, $0f
-    sub A, D
-    bit 7, D
-    jr NZ, .tile_below
-    jr NC, .tile_below
-    cpl
-    inc  A
-.tile_below:
-    cp A, $04
-    bit 0, B
-    jr Z, .check_and_loop
-    jr C, .y_prox_check_complete
-    set 2, C
-    jr .y_prox_check_complete
-.check_and_loop:
-    dec B
-    jr C, .y_prox_check_complete
-    set 3, C
-    jr .start_y_prox_check
-    
-.y_prox_check_complete:
-    push DE
-    ; D is not useful until we return, put in collision flags
-    ld A, C
-    swap A ; both top and bottom nibble should have prox and collision flags
-    add A, C
-    ld D, A
-
-    ld C, $10 ; starting x position on the right
-.loop_inner:
-    ld A, [HL-]
-    push HL
-    ld L, [HL]
-    ld H, A
-    call checkSpawnCollision
-    jr Z, .keep_going
-    call loopInnards
-.keep_going:
-    pop HL
-    dec HL
-
-    res 0, D
-    res 1, D
-
-    ; move bits 7/6 from B to 1/0 in D
-    ; srl D
-    ; srl D
-    ; ld A, B
-    ; rla
-    ; rl D
-    ; rla
-    ; rl D
-    ; rra
-    ; rra
-    ; ld B, A
-
-    dec C
-    dec C
-    jr NZ, .loop_inner
-    dec B
-    dec B
-    ld A, B
-    and A, $0f
-    jr NZ, .loop_outer
-
-    ld DE, wSpawnPlacementScratch
-    ld HL, SP
-    call sub_HL_DE
-    ld A, L
-    rr H
-    rra
-    ld [DE], A
-
-    ld HL, wStackPointerBackupLow
-    ld A, [HL+]
-    ld H, [HL]
-    ld L, A
-    ld SP, HL
-    ret
-
 selectRandomNpcPlacement:
    ld A, [wSpawnPlacementScratch]
    ld C, A
    call getRandomInRange
+   add A, A
+   cpl
    ld C, A
-   ld HL, wSpawnPlacementScratch+1
+   ld A, B
+   rla
+   cpl
+   ld B, A
+   inc C
+   ld HL, wSpawnPlacementScratch+329
    add HL, BC
-   ld A, [HL]
-   and A, $0f
+   ld A, [HL+]
    ld E, A
-   inc E
    ld A, [HL]
-   swap A
    and A, $0f
    ld D, A
-   inc D
    ret
 
 ;; C = npc type
@@ -1120,7 +1018,21 @@ spawnNpcsFromTable:
 .random_location:
     push BC
     DBGMSGLOC debugMsg1
-    call prepareNpcPlacementOptions
+    ; Get object collision flag based on NPC type, put it in A
+    ld A, C
+    ld L, A
+    ld H, $00
+    ld E, L
+    ld D, H
+    add HL, DE
+    add HL, DE
+    add HL, HL
+    add HL, HL
+    add HL, HL
+    ld DE, npcDataTable
+    add HL, DE
+    ld A, [HL]
+    call prepareNpcPlacementOptions_trampoline
     DBGMSGLOC debugMsg2
     pop BC
 .random_loop:

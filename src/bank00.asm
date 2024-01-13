@@ -7364,146 +7364,35 @@ updateMetatileAttributeCache:
 ;    pop AF
 ;    jr checkTileCollisionForSpawn
 
-prepareForPrepare:
-    ; Get object collision flag based on NPC type, put it in A
-    ld A, C
-    ld L, A
-    ld H, $00
-    ld E, L
-    ld D, H
-    add HL, DE
-    add HL, DE
-    add HL, HL
-    add HL, HL
-    add HL, HL
-    ld DE, npcDataTable
-    add HL, DE
-    ld A, [HL]
+callFunctionInBank0E:
+    ld   [wScratchBankCallFunctionNumber], A           ;; 00:1f06 $ea $b2 $c0
+    pop  AF                                            ;; 00:1f09 $f1
+    ld   [wScratchBankCallA], A                        ;; 00:1f0a $ea $b3 $c0
+    ld   A, H                                          ;; 00:1f0d $7c
+    ld   [wScratchBankCallH], A                        ;; 00:1f0e $ea $b5 $c0
+    ld   A, L                                          ;; 00:1f11 $7d
+    ld   [wScratchBankCallL], A                        ;; 00:1f12 $ea $b4 $c0
+    ld   HL, returnFromBankCall                        ;; 00:1f15 $21 $c2 $1f
+    push HL                                            ;; 00:1f18 $e5
+    ld   A, BANK(entryPointTableBank0E) ;@=bank entryPointTableBank02 ;; 00:1f19 $3e $02
+    call pushBankNrAndSwitch                           ;; 00:1f1b $cd $fb $29
+    ld   A, [wScratchBankCallFunctionNumber]           ;; 00:1f1e $fa $b2 $c0
+    add  A, A                                          ;; 00:1f21 $87
+    ld   L, A                                          ;; 00:1f22 $6f
+    ld   H, $40                                        ;; 00:1f23 $26 $40
+    ld   A, [HL+]                                      ;; 00:1f25 $2a
+    ld   H, [HL]                                       ;; 00:1f26 $66
+    ld   L, A                                          ;; 00:1f27 $6f
+    push HL                                            ;; 00:1f28 $e5
+    ld   A, [wScratchBankCallH]                        ;; 00:1f29 $fa $b5 $c0
+    ld   H, A                                          ;; 00:1f2c $67
+    ld   A, [wScratchBankCallL]                        ;; 00:1f2d $fa $b4 $c0
+    ld   L, A                                          ;; 00:1f30 $6f
+    ld   A, [wScratchBankCallA]                        ;; 00:1f31 $fa $b3 $c0
+    ret                                                ;; 00:1f34 $c9
 
-    ; Save collision information based on type in C
-    and A, $07
-    cp A, $01
-    jr Z, .land
-    cp A, $05
-    jr Z, .water
-    ld B, $00
-    jr .typing_done
-.water:
-    ld B, $80
-    jr .typing_done
-.land:
-    ld B, $20
-.typing_done:
-
-    ; Get player position in DE
-    ld C, $04
-    call getObjectNearestTilePosition
-
-    ; Backup stack pointer, we will be using the stack operations to speed up function processing
-    ld [wStackPointerBackupLow], SP
-
-    ; Store the player Y position at the start of the scratch array for easy access
-    ld HL, wSpawnPlacementScratch
-    ld A, D
-    ld [HL+], A
-
-    ; Load in the scratch location into the stack pointer for fast writes
-    ld SP, HL
-
-    ; Loop over position potentials and check for suitability
-    ld A, $0b ; number of y positions to check
-    add A, B
-    ld B, A
-    ret
-
-loopInnards:
-    ; Passed the collision test, now check for proximity to player.
-    ; NPC cannot be placed within 4 tile positions of the player.
-    ; Given sprites are 2 tiles wide, this translate to requiring
-    ; NPCs to be at least 1 metatile apart from the player.
-.proximity_test:
-    bit 0, D
-    jr Z, .check_next
-    bit 2, D
-    jr NZ, .far_enough_away
-    ld A, C
-    sub A, E
-    bit 7, E
-    jr NZ, .tile_right
-    jr NC, .tile_right
-    cpl
-    inc  A
-.tile_right:
-    cp A, $04
-    jr C, .check_next
-.far_enough_away:
-    ld HL, wSpawnPlacementScratch
-    inc [HL]
-    ld A, L
-    add A, [HL]
-    ld L, A
-    jr NC, .ready_to_write
-    inc H
-.ready_to_write:
-
-    ; Store tile position minus 1 into the left and right nibble of placement array
-    ld A, B
-    dec A
-    swap A
-    and A, $f0
-    add C
-    dec A
-    ld [HL], A
-.check_next:
-    bit 0, B
-    jr NZ, .continue_y
-    inc B
-    rrc D
-    jr .proximity_test
-.continue_y:
-    bit 0, C
-    jr NZ, .complete_check
-    dec B
-    inc C
-    rlc D
-    ld A, D
-    swap D
-    or A, $f0
-    and A, D
-    ld D, A
-    jr .proximity_test
-.complete_check:
-    dec B
-    dec C
-    rlc D
-    ret
-
-checkSpawnCollision:
-    ld A, B
-    and A, $f0
-    jr Z, .air_collision_check
-    ld H, A
-    rrca
-    add A, H
-    and A, L
-    ret Z
-    ld A, H
-    and A, L
-    jr Z, .check_y_pos
-    set 1, D
-    rrca
-    and A, L
-    ret Z
-.check_y_pos:
-    inc D ; faster than set 0, D
-    ret
-.air_collision_check:
-    ld A, $04
-    and A, H
-    ret Z
-    set 1, D
-    inc D
-    ret
+prepareNpcPlacementOptions_trampoline:
+    jp_to_bank 0E, prepareNpcPlacementOptions
 
 ;; A = object collision flags
 ;; D = y tile coordinate

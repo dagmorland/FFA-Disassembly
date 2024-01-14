@@ -6184,7 +6184,7 @@ prepareNpcPlacementOptions:
     call getObjectNearestTilePosition
 
     ; Store the player Y position at the start of the scratch array for easy access
-    ld HL, wSpawnPlacementScratch
+    ld HL, wSpawnPlacementScratch+1
     ld A, D
     ld [HL+], A
     ld [HL], E
@@ -6195,7 +6195,9 @@ prepareNpcPlacementOptions:
 
     ; Load in the scratch location into the stack pointer for fast writes
     ld HL, wSpawnPlacementScratch+331
-    ld A, $04
+    ld A, [rIE]
+    ld [wSpawnPlacementScratch], A
+    and A, $04
     ld [rIE], A
     ld SP, HL
 
@@ -6220,7 +6222,7 @@ prepareNpcPlacementOptions:
     ld D, C ; C guaranteed to be 0 at this point
 
     ; Load player y position into C
-    ld A, [wSpawnPlacementScratch]
+    ld A, [wSpawnPlacementScratch+1]
     ld C, A
 
     ; Do proximity checks in y direction
@@ -6298,7 +6300,7 @@ prepareNpcPlacementOptions:
     jr Z, .check_next
     bit 2, D
     jr NZ, .far_enough_away
-    ld A, [wSpawnPlacementScratch+1]
+    ld A, [wSpawnPlacementScratch+2]
     sub A, C
     bit 7, A
     jr Z, .tile_left_of_player
@@ -6355,7 +6357,7 @@ prepareNpcPlacementOptions:
     ld H, [HL]
     ld L, A
     ld SP, HL
-    ld A, $07
+    ld A, [wSpawnPlacementScratch]
     ld [rIE], A
 
     ld HL, wSpawnPlacementScratch+331

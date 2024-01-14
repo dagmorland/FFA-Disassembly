@@ -6724,7 +6724,15 @@ setNpcSpawnTable_trampoline:
 scriptOpCodeSpawnNPC:
     ld   A, [wScriptOpCounter]                         ;; 00:2820 $fa $99 $d4
     cp   A, $00                                        ;; 00:2823 $fe $00
-    call Z, spawnNpcsFromTable_trampoline;doSpawnDance              ;; 00:2825 $cc $40 $28
+    ld A, [wNPCSpawnTableIndex]
+    cp A, $1E
+    ld A, [HL+]                                      ;; 00:2840 $2a
+    jr Z, .do_dance
+    call Z, spawnNpcsFromTable_trampoline             ;; 00:2825 $cc $40 $28
+    jr .dont_dance
+.do_dance:
+    call Z, doSpawnDance              ;; 00:2825 $cc $40 $28
+.dont_dance:
     ld   A, $01                                        ;; 00:2828 $3e $01
     ld   [wScriptOpCounter], A                         ;; 00:282a $ea $99 $d4
     ld   A, [wTileCopyRequestCount]                    ;; 00:282d $fa $e0 $c8
@@ -6738,7 +6746,7 @@ scriptOpCodeSpawnNPC:
     ret                                                ;; 00:283f $c9
 
 doSpawnDance:
-    ld   A, [HL+]                                      ;; 00:2840 $2a
+    ;ld   A, [HL+]                                      ;; 00:2840 $2a
     push BC
     push AF
     ldh  A, [rIE]
@@ -6759,10 +6767,16 @@ ELIF DEF(RNG_LCG)
     ld   A, $00
     ldh  [$ffa3], A
     ld   C, A
-ENDC
-    xor  A, A
     ldh  [$ffa0], A
     ldh  [$ffa1], A
+    ld  A, [wRndState0]
+    ld  B, A
+    ld  A, [wRndState1]
+    ld  C, A
+    ld  A, [wRndState]
+    ld  D, A
+ENDC
+    xor  A, A
     push HL
 .profile_loop:
     pop  HL
@@ -6771,6 +6785,7 @@ ENDC
     push HL
     push BC
 	push DE
+    ld A, $01
     call spawnNpcsFromTable_trampoline
 	pop DE
     pop BC
@@ -6816,7 +6831,7 @@ ENDC
     ret
 
 spawnNpcsFromTable_trampoline:
-    ld   A, [HL+]                                      ;; 00:2840 $2a
+    ;ld   A, [HL+]                                      ;; 00:2840 $2a
     jp_to_bank 03, spawnNpcsFromTable                  ;; 00:2841 $f5 $3e $04 $c3 $35 $1f
 
 setHLToZero_3_trampoline:

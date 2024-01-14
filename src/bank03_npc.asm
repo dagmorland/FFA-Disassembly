@@ -1042,13 +1042,15 @@ spawnNpcsFromTable:
     ;call getRandomTile                                 ;; 03:454b $cd $cd $44
     ;call checkNpcPotentialPlacement                    ;; 03:454e $cd $88 $44
     ;jr   Z, .random_location                           ;; 03:4551 $28 $f8
+    push DE
     push BC                                            ;; 03:4553 $c5
     call spawnNPC                                      ;; 03:4554 $cd $bd $42
     pop  BC                                            ;; 03:4557 $c1
+    pop  DE
     dec  B                                             ;; 03:4558 $05
+    DBGMSGLOC debugMsg3
     jr   NZ, .random_loop                              ;; 03:4559 $20 $f0
     pop  HL                                            ;; 03:455b $e1
-    DBGMSGLOC debugMsg2
     ret                                                ;; 03:455c $c9
 
 setHLToZero_3:

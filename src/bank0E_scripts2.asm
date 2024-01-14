@@ -6164,7 +6164,7 @@ script_0549:
 ; Make a list of NPC placement options in the interval y [02,0c] and x [02,10]
 prepareNpcPlacementOptions:
 
-    ; Save collision information based on type in C
+    ; Save collision information based on type in B
     and A, $07
     cp A, $01
     jr Z, .land
@@ -6295,6 +6295,12 @@ prepareNpcPlacementOptions:
     ld A, D
     and A, $03
     jr Z, .positions_blocked ; all metatile positions blocked
+    ; if only the top/bottom of a land tile is set, the center of the tile is blocked
+    cp A, $03
+    jr NC, .proximity_test
+    bit 5, E
+    jr Z, .proximity_test
+    jr .prepare_for_right_column
 .proximity_test:
     bit 0, D
     jr Z, .check_next
@@ -6321,8 +6327,9 @@ prepareNpcPlacementOptions:
     bit 0, C
     jr NZ, .complete_check
     inc B
-    inc C
     rlc D
+.prepare_for_right_column:
+    inc C
     ld A, D
     swap D ; swapped D persists to next column
     or A, $f0

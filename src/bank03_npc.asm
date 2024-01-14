@@ -1033,8 +1033,8 @@ spawnNpcsFromTable:
     add HL, DE
     ld A, [HL]
     call prepareNpcPlacementOptions_trampoline
-    DBGMSGLOC debugMsg2
     pop BC
+    DBGMSGLOC debugMsg2
 .random_loop:
     push BC
     call selectRandomNpcPlacement

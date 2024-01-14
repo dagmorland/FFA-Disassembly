@@ -6724,15 +6724,15 @@ setNpcSpawnTable_trampoline:
 scriptOpCodeSpawnNPC:
     ld   A, [wScriptOpCounter]                         ;; 00:2820 $fa $99 $d4
     cp   A, $00                                        ;; 00:2823 $fe $00
-    ld A, [wNPCSpawnTableIndex]
-    cp A, $1E
-    ld A, [HL+]                                      ;; 00:2840 $2a
-    jr Z, .do_dance
+    ;ld A, [wNPCSpawnTableIndex]
+    ;cp A, $1E
+    ;ld A, [HL+]                                      ;; 00:2840 $2a
+;    jr Z, .do_dance
     call Z, spawnNpcsFromTable_trampoline             ;; 00:2825 $cc $40 $28
-    jr .dont_dance
-.do_dance:
-    call Z, doSpawnDance              ;; 00:2825 $cc $40 $28
-.dont_dance:
+;    jr .dont_dance
+;.do_dance:
+;    call Z, doSpawnDance              ;; 00:2825 $cc $40 $28
+;.dont_dance:
     ld   A, $01                                        ;; 00:2828 $3e $01
     ld   [wScriptOpCounter], A                         ;; 00:282a $ea $99 $d4
     ld   A, [wTileCopyRequestCount]                    ;; 00:282d $fa $e0 $c8
@@ -6831,7 +6831,7 @@ ENDC
     ret
 
 spawnNpcsFromTable_trampoline:
-    ;ld   A, [HL+]                                      ;; 00:2840 $2a
+    ld   A, [HL+]                                      ;; 00:2840 $2a
     jp_to_bank 03, spawnNpcsFromTable                  ;; 00:2841 $f5 $3e $04 $c3 $35 $1f
 
 setHLToZero_3_trampoline:

@@ -72,16 +72,16 @@ debugMsg1:
 IF DEF(RNG_ORIGINAL)
     db "X %($FF9E)% %($FF05)% %($C0B1)% %($C0B0)%"
 ELIF DEF(RNG_LCG)
-    db "X %($FF9E)% %($FF05)% %($FFA2)% %($FFA3)% %($c0af)% %($c0b0)% %($c0b1)%"
+    db "X %($FF9E)% %($FF05)% %($FF44)% %($FFA2)% %($FFA3)% %($c0af)% %($c0b0)% %($c0b1)%"
 ENDC
     db $00
 
 debugMsg2:
-    db "Y %($FF9E)% %($FF05)%"
+    db "Y %($FF9E)% %($FF05)% %($FF44)%"
     db $00
 
 debugMsg3:
-    db "Z %($FF9E)% %($FF05)% %($FFA0)% %($FFA1)% %DE%"
+    db "Z %($FF9E)% %($FF05)% %($FF44)% %($FFA0)% %($FFA1)% %DE%"
     db $00
 
 ; Each frame this animates one of the tile animation types

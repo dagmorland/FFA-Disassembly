@@ -828,18 +828,16 @@ selectRandomNpcPlacement:
    add A, A
    cpl
    ld C, A
-   ld A, B
+   ld A, B ; B guaranteed to be 0 coming out of getRandomInRange
    rla
    cpl
    ld B, A
-   inc C
+   inc BC
    ld HL, wSpawnPlacementScratch+329
    add HL, BC
    ld A, [HL+]
+   ld D, [HL]
    ld E, A
-   ld A, [HL]
-   and A, $0f
-   ld D, A
    ret
 
 ;; C = npc type

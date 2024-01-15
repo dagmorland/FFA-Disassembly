@@ -6283,11 +6283,6 @@ prepareNpcPlacementOptions:
 
 .finish_collision_check:
     dec HL
-    ld A, B
-    cp A, $02
-    jr NZ, .perform_prox_check
-    res 1, D
-.perform_prox_check:
     ; Passed the collision test, now check for proximity to player.
     ; NPC cannot be placed within 4 tile positions of the player.
     ; Given sprites are 2 tiles wide, this translate to requiring
@@ -6322,6 +6317,9 @@ prepareNpcPlacementOptions:
     jr NZ, .continue_x
     dec B
     rrc D
+    ld A, B
+    dec A ; skip y position 1 by design
+    jr Z, .continue_x
     jr .proximity_test
 .continue_x:
     bit 0, C

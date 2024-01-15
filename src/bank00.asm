@@ -956,8 +956,8 @@ getObjectNearestTilePosition:
     add  HL, HL                                        ;; 00:05f3 $29
     add  HL, HL                                        ;; 00:05f4 $29
     add  HL, HL                                        ;; 00:05f5 $29
-    ld   BC, wObjectRuntimeData                        ;; 00:05f6 $01 $00 $c2
-    add  HL, BC                                        ;; 00:05f9 $09
+    ld   DE, wObjectRuntimeData
+    add  HL, DE
     ld   DE, $04                                       ;; 00:05fa $11 $04 $00
     add  HL, DE                                        ;; 00:05fd $19
     ld   A, [HL+]                                      ;; 00:05fe $2a
@@ -4308,6 +4308,64 @@ noCollision:
     cp   A, $01                                        ;; 00:190c $fe $01
     ret                                                ;; 00:190e $c9
 
+;; A = object collision flags
+;; D = y tile coordinate
+;; E = x tile coordinate
+;; HL = tile attributes
+;; Return: Z = collision
+;checkTileCollisionForSpawn:
+;    and  A, $07
+;    cp   A, $01
+;    jr   Z, .land
+;    cp   A, $03
+;    jr   Z, .air
+;    cp   A, $05
+;    jr   Z, .water
+;    cp   A, $00
+;    jr   Z, .collisionless
+;    xor  A, A
+;    ret
+;.collisionless:
+;    xor  A, A
+;    inc  A
+;    ret
+;.air:
+;    ld A, $04
+;    and A, H
+;    ret
+;.water:
+;    ld A, $c0
+;    and A, L
+;    ret Z
+;    ld A, $80
+;    and A, L
+;    jr Z, .water_check_below
+;    ld A, $40
+;    and A, L
+;    ret NZ
+;    inc D
+;    bit 0, D
+;    ret
+;.water_check_below:
+;    bit 0, D
+;    ret
+;.land:
+;    ld A, $30
+;    and A, L
+;    ret  Z
+;    ld A, $20
+;    and A, L
+;    jr Z, .land_check_below
+;    ld A, $10
+;    and A, L
+;    ret  NZ
+;    inc D
+;    bit 0, D
+;    ret
+;.land_check_below:
+;    bit  0, D
+;    ret
+
 ; A = object collision flags
 ; D = y tile coordinate
 ; E = x tile coordinate
@@ -6666,7 +6724,15 @@ setNpcSpawnTable_trampoline:
 scriptOpCodeSpawnNPC:
     ld   A, [wScriptOpCounter]                         ;; 00:2820 $fa $99 $d4
     cp   A, $00                                        ;; 00:2823 $fe $00
-    call Z, spawnNpcsFromTable_trampoline;doSpawnDance              ;; 00:2825 $cc $40 $28
+    ;ld A, [wNPCSpawnTableIndex]
+    ;cp A, $1E
+    ;ld A, [HL+]                                      ;; 00:2840 $2a
+;    jr Z, .do_dance
+    call Z, spawnNpcsFromTable_trampoline             ;; 00:2825 $cc $40 $28
+;    jr .dont_dance
+;.do_dance:
+;    call Z, doSpawnDance              ;; 00:2825 $cc $40 $28
+;.dont_dance:
     ld   A, $01                                        ;; 00:2828 $3e $01
     ld   [wScriptOpCounter], A                         ;; 00:282a $ea $99 $d4
     ld   A, [wTileCopyRequestCount]                    ;; 00:282d $fa $e0 $c8
@@ -6680,7 +6746,7 @@ scriptOpCodeSpawnNPC:
     ret                                                ;; 00:283f $c9
 
 doSpawnDance:
-    ld   A, [HL+]                                      ;; 00:2840 $2a
+    ;ld   A, [HL+]                                      ;; 00:2840 $2a
     push BC
     push AF
     ldh  A, [rIE]
@@ -6701,10 +6767,16 @@ ELIF DEF(RNG_LCG)
     ld   A, $00
     ldh  [$ffa3], A
     ld   C, A
-ENDC
-    xor  A, A
     ldh  [$ffa0], A
     ldh  [$ffa1], A
+    ld  A, [wRndState0]
+    ld  B, A
+    ld  A, [wRndState1]
+    ld  C, A
+    ld  A, [wRndState]
+    ld  D, A
+ENDC
+    xor  A, A
     push HL
 .profile_loop:
     pop  HL
@@ -6713,6 +6785,7 @@ ENDC
     push HL
     push BC
 	push DE
+    ld A, $01
     call spawnNpcsFromTable_trampoline
 	pop DE
     pop BC
@@ -7218,20 +7291,6 @@ INCLUDE "code/rand_ffa.asm"
 ;    pop bc
 ;    ret
 
-; Free space. The linear congruential generator takes up a lot less space than the original table based method.
-;db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
-;db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
-;db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
-;db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
-;db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
-;db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
-;db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
-;db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
-;db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
-;db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
-;db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
-;db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
-
 ; Get a uniform random number on [0,C)
 ; Output:
 ;  A = pseudo-uniform random value from [0,C)
@@ -7319,226 +7378,6 @@ updateMetatileAttributeCache:
     ld HL, wRoomTiles
     jp drawMetaTile_immediate
 
-;getMetatileAttributesAroundObject:
-;    inc D
-;    push AF
-;    ;and A, $07
-;    ;jp Z, noCollision
-;    push DE
-;    srl D
-;    srl E
-;    ld   A, D
-;    add  A, A
-;    ld   L, A
-;    add  A, A
-;    add  A, A
-;    add  A, L
-;    add  A, E
-;    ld   E, A
-;    ld   D, $00
-;    ld HL, wMetatileAttributeCache
-;    add  HL, DE
-;    add  HL, DE
-;    pop DE
-;    bit 0, E
-;    jr Z, .load_just_one_tile
-;    push DE
-;    ld A, [HL+]
-;    ld E, A
-;    ld A, [HL+]
-;    ld D, A
-;    ld A, [HL+]
-;    ld H, [HL]
-;    and A, E
-;    ld L, A
-;    ld A, D
-;    and A, H
-;    ld H, A
-;    pop DE
-;    jr .finish
-;.load_just_one_tile:
-;    ld A, [HL+]
-;    ld H, [HL]
-;    ld L, A
-;.finish:
-;    pop AF
-;    jr checkTileCollisionForSpawn
-
-prepareForPrepare:
-    ; Get object collision flag based on NPC type, put it in A
-    ld A, C
-    ld L, A
-    ld H, $00
-    ld E, L
-    ld D, H
-    add HL, DE
-    add HL, DE
-    add HL, HL
-    add HL, HL
-    add HL, HL
-    ld DE, npcDataTable
-    add HL, DE
-    ld A, [HL]
-
-    ; Save collision information based on type in C
-    and A, $07
-    cp A, $01
-    jr Z, .land
-    cp A, $05
-    jr Z, .water
-    ld C, $00
-    jr .typing_done
-.water:
-    ld C, $80
-    jr .typing_done
-.land:
-    ld C, $20
-.typing_done:
-
-    ; Get player position in DE
-    push BC
-    ld C, $04
-    call getObjectNearestTilePosition
-    pop BC
-
-    ; Reset number of placements found
-    xor A, A
-    ld [wSpawnPlacementScratch], A
-
-    ; Loop over position potentials and check for suitability
-    ld B, $0b ; number of y positions to check
-    ret
-
-loopInnards:
-    ; Passed the collision test, now check for proximity to player.
-    ; NPC cannot be placed within 4 tile positions of the player.
-    ; Given sprites are 2 tiles wide, this translate to requiring
-    ; NPCs to be at least 1 metatile apart from the player.
-    bit 3, D
-    set 3, D
-    jr Z, .proximity_test
-    inc C
-    set 1, D ; signifies we are looking at the right neighbor
-.proximity_test:
-    bit 2, D
-    jr NZ, .far_enough_away
-    ld A, C
-    sub A, E
-    bit 7, E
-    jr NZ, .tile_right
-    jr NC, .tile_right
-    cpl
-    inc  A
-.tile_right:
-    cp A, $04
-    jr C, .check_8px_neighbor
-.far_enough_away:
-    ld HL, wSpawnPlacementScratch
-    inc [HL]
-    ld A, L
-    add A, [HL]
-    ld L, A
-    jr NC, .ready_to_write
-    inc H
-.ready_to_write:
-
-    ; Store tile position minus 1 into the left and right nibble of placement array
-    ld A, B
-    dec A
-    swap A
-    add C
-    dec A
-    ld [HL], A
-.check_8px_neighbor:
-    bit 1, D
-    ret Z
-    dec C
-    res 1, D
-    jr .proximity_test
-
-checkSpawnCollision:
-    ld A, D
-    and A, $f0
-    jr Z, .air_collision_check
-    ld H, A
-    rrca
-    add A, H
-    and A, L
-    ret Z
-    ld A, H
-    and A, L
-    jr Z, .check_y_pos
-    rrca
-    and A, L
-    ret NZ
-    inc A
-.check_y_pos:
-    add A, D
-    bit 0, A
-    ret
-.air_collision_check:
-    ld A, $04
-    and A, H
-    ret
-
-;; A = object collision flags
-;; D = y tile coordinate
-;; E = x tile coordinate
-;; HL = tile attributes
-;; Return: Z = collision
-;checkTileCollisionForSpawn:
-;    and  A, $07
-;    cp   A, $01
-;    jr   Z, .land
-;    cp   A, $03
-;    jr   Z, .air
-;    cp   A, $05
-;    jr   Z, .water
-;    cp   A, $00
-;    jr   Z, .collisionless
-;    xor  A, A
-;    ret
-;.collisionless:
-;    xor  A, A
-;    inc  A
-;    ret
-;.air:
-;    ld A, $04
-;    and A, H
-;    ret
-;.water:
-;    ld A, $c0
-;    and A, L
-;    ret Z
-;    ld A, $80
-;    and A, L
-;    jr Z, .water_check_below
-;    ld A, $40
-;    and A, L
-;    ret NZ
-;    inc D
-;    bit 0, D
-;    ret
-;.water_check_below:
-;    bit 0, D
-;    ret
-;.land:
-;    ld A, $30
-;    and A, L
-;    ret  Z
-;    ld A, $20
-;    and A, L
-;    jr Z, .land_check_below
-;    ld A, $10
-;    and A, L
-;    ret  NZ
-;    inc D
-;    bit 0, D
-;    ret
-;.land_check_below:
-;    bit  0, D
-;    ret
-
 cacheMetatileAttributesAndLoadRoomTiles:
     ld A, BANK(metatilesOutdoor)
     call pushBankNrAndSwitch
@@ -7577,6 +7416,37 @@ cacheMetatileAttributesAndLoadRoomTiles:
     call popBankNrAndSwitch
     ld HL, wRoomTiles
     jp loadRoomTiles
+
+callFunctionInBank0E:
+    ld   [wScratchBankCallFunctionNumber], A
+    pop  AF
+    ld   [wScratchBankCallA], A
+    ld   A, H
+    ld   [wScratchBankCallH], A
+    ld   A, L
+    ld   [wScratchBankCallL], A
+    ld   HL, returnFromBankCall
+    push HL
+    ld   A, BANK(entryPointTableBank0E)
+    call pushBankNrAndSwitch
+    ld   A, [wScratchBankCallFunctionNumber]
+    add  A, A
+    ld   L, A
+    ld   H, $40
+    ld   A, [HL+]
+    ld   H, [HL]
+    ld   L, A
+    push HL
+    ld   A, [wScratchBankCallH]
+    ld   H, A
+    ld   A, [wScratchBankCallL]
+    ld   L, A
+    ld   A, [wScratchBankCallA]
+    ret
+
+prepareNpcPlacementOptions_trampoline:
+    jp_to_bank 0E, prepareNpcPlacementOptions
+
 ENDC
 
 CopyHL_to_DE_size_BC:

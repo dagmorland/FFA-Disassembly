@@ -1582,17 +1582,17 @@ wD8DA:
 wDualCharacterScratch:
     ds 3                                               ;; d8db
 
-; First byte holds number of options (up to 165)
-; Subsequent bytes each provide a spawn location option (y in first nibble, x in second)
-wSpawnPlacementScratch:
-    ds 166
-
 wMetatileAttributeCache:
     ds 160
 
+; First byte holds number of options (up to 165)
+; Subsequent 2-byte pairs provide a spawn location option (x followed by y). This space can be reused for scratch space in its entirety outside of the spawnNpcsFromTable function.
+wSpawnPlacementScratch:
+    ds 331
+
 ; Unused and ready for future features!
 wUnused:
-    ds 1500
+    ds 1335
 
 SECTION "hram", HRAM[$ff80]
 
@@ -1645,13 +1645,7 @@ hSoundEffectLoopCounterChannel1:
 ; END OF AUDIO ENGINE HRAM (ff9e is not included)
 ; One byte long
 hSoundEffectLoopCounterChannel4:
-    ds 1                                               ;; ff9d
-
-hScratchPad:
-    ds 91
-
-hScratchSpawnPlacement:
-    ds 1
+    ds 93                                               ;; ff9d
 
 ; These next three are used as values for signed math. BadBoy understands this, yet still adds them here.
 hUnusedFFFA:

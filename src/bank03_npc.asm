@@ -821,93 +821,23 @@ setNpcSpawnTable:
     pop  HL                                            ;; 03:4486 $e1
     ret                                                ;; 03:4487 $c9
 
-; C = NPC type
-; Make a list of NPC placement options in the interval y [02,0c] and x [02,10]
-prepareNpcPlacementOptions:
-    call prepareForPrepare
-    push DE
-    ld HL, wMetatileAttributeCache+141
-.loop_outer:
-    inc B
-
-    bit 0, C
-    jr Z, .go_back_one_row
-    ; increase metatile attr pointer by 16
-    ld DE, $0010
-    jr .continue_outer_loop
-.go_back_one_row:
-    ; reduce metatile attr pointer by 4
-    ld DE, $fffc
-.continue_outer_loop:
-    add HL, DE
-
-    ; Reset 'tile to the right is collisionless' flag in C bit 3
-    res 3, C
-
-    ; Do proximity check in y direction, store result in C bit 2
-    res 2, C
-    pop DE
-    ld A, B
-    sub A, D
-    bit 7, D
-    jr NZ, .tile_below
-    jr NC, .tile_below
-    cpl
-    inc  A
-.tile_below:
-    cp A, $04
-    jr C, .too_close
-    set 2, C
-.too_close:
-    push DE
-    ; D is not useful until we return, put in collision flags
-    ld D, C
-
-    ld C, $10 ; number of x positions to check
-
-.loop_inner:
-    ld A, [HL-]
-    push HL
-    ld L, [HL]
-    ld H, A
-    call checkSpawnCollision
-    jr Z, .no_innards
-    call loopInnards
-    jr .keep_going
-.no_innards
-    res 3, D
-.keep_going:
-    pop HL
-    dec HL
-    dec C
-    dec C
-    jr NZ, .loop_inner
-    ; swap first bit of D
-    inc D
-    res 1, D
-    ld C, D
-    dec B
-    dec B
-    jr NZ, .loop_outer
-    pop DE
-    ret
-
 selectRandomNpcPlacement:
    ld A, [wSpawnPlacementScratch]
    ld C, A
    call getRandomInRange
+   add A, A
+   cpl
    ld C, A
-   ld HL, wSpawnPlacementScratch+1
+   ld A, B ; B guaranteed to be 0 coming out of getRandomInRange
+   rla
+   cpl
+   ld B, A
+   inc BC
+   ld HL, wSpawnPlacementScratch+329
    add HL, BC
-   ld A, [HL]
-   and A, $0f
+   ld A, [HL+]
+   ld D, [HL]
    ld E, A
-   inc E
-   ld A, [HL]
-   swap A
-   and A, $0f
-   ld D, A
-   inc D
    ret
 
 ;; C = npc type
@@ -1000,6 +930,7 @@ selectRandomNpcPlacement:
 ;    ret                                                ;; 03:44ec $c9
 
 spawnNpcsFromTable:
+    DBGMSGLOC debugMsg1
     push HL                                            ;; 03:44ed $e5
     push AF                                            ;; 03:44ee $f5
     add  A, A                                          ;; 03:44ef $87
@@ -1085,10 +1016,23 @@ spawnNpcsFromTable:
     ret                                                ;; 03:454a $c9
 .random_location:
     push BC
-    DBGMSGLOC debugMsg1
-    call prepareNpcPlacementOptions
-    DBGMSGLOC debugMsg2
+    ; Get object collision flag based on NPC type, put it in A
+    ld A, C
+    ld L, A
+    ld H, $00
+    ld E, L
+    ld D, H
+    add HL, DE
+    add HL, DE
+    add HL, HL
+    add HL, HL
+    add HL, HL
+    ld DE, npcDataTable
+    add HL, DE
+    ld A, [HL]
+    call prepareNpcPlacementOptions_trampoline
     pop BC
+    DBGMSGLOC debugMsg2
 .random_loop:
     push BC
     call selectRandomNpcPlacement
@@ -1096,13 +1040,15 @@ spawnNpcsFromTable:
     ;call getRandomTile                                 ;; 03:454b $cd $cd $44
     ;call checkNpcPotentialPlacement                    ;; 03:454e $cd $88 $44
     ;jr   Z, .random_location                           ;; 03:4551 $28 $f8
+    push DE
     push BC                                            ;; 03:4553 $c5
     call spawnNPC                                      ;; 03:4554 $cd $bd $42
     pop  BC                                            ;; 03:4557 $c1
+    pop  DE
     dec  B                                             ;; 03:4558 $05
+    DBGMSGLOC debugMsg3
     jr   NZ, .random_loop                              ;; 03:4559 $20 $f0
     pop  HL                                            ;; 03:455b $e1
-    DBGMSGLOC debugMsg2
     ret                                                ;; 03:455c $c9
 
 setHLToZero_3:

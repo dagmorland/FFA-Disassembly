@@ -4,7 +4,6 @@ INCLUDE "include/hardware.inc"
 INCLUDE "include/macros.inc"
 INCLUDE "include/charmaps.inc"
 INCLUDE "include/constants.inc"
-INCLUDE "include/debug.inc"
 
 SECTION "bank03", ROMX[$4000], BANK[$03]
 
@@ -52,9 +51,8 @@ npcRunBehaviorForAll:
     pop  BC                                            ;; 03:4042 $c1
     dec  B                                             ;; 03:4043 $05
     jr   NZ, .loop                                     ;; 03:4044 $20 $f0
-    jp projectileRunLogicForAll_trampoline           
-    ;call projectileRunLogicForAll_trampoline           ;; 03:4046 $cd $d1 $2b
-    ;ret                                                ;; 03:4049 $c9
+    call projectileRunLogicForAll_trampoline           ;; 03:4046 $cd $d1 $2b
+    ret                                                ;; 03:4049 $c9
 
 ; HL = Npc Runtime Data entry pointer
 npcRunBehavior:
@@ -670,11 +668,10 @@ destroyNPC:
     inc  HL                                            ;; 03:43ac $23
     ld   A, $00                                        ;; 03:43ad $3e $00
     ld   B, $17                                        ;; 03:43af $06 $17
-    jp fillMemory
-    ;call fillMemory                                    ;; 03:43b1 $cd $5d $2b
-    ;ret                                                ;; 03:43b4 $c9
-    ;db   $21, $e0, $c4, $06, $0d, $11, $18, $00        ;; 03:43b5 ????????
-    ;db   $3e, $ff, $77, $19, $05, $20, $fb, $c9        ;; 03:43bd ????????
+    call fillMemory                                    ;; 03:43b1 $cd $5d $2b
+    ret                                                ;; 03:43b4 $c9
+    db   $21, $e0, $c4, $06, $0d, $11, $18, $00        ;; 03:43b5 ????????
+    db   $3e, $ff, $77, $19, $05, $20, $fb, $c9        ;; 03:43bd ????????
 
 giveFollower:
     ld   C, A                                          ;; 03:43c5 $4f
@@ -688,9 +685,8 @@ giveFollower:
     call destroyNPC                                    ;; 03:43d3 $cd $5f $43
     pop  DE                                            ;; 03:43d6 $d1
     pop  BC                                            ;; 03:43d7 $c1
-    jp spawnNPC
-    ;call spawnNPC                                      ;; 03:43d8 $cd $bd $42
-    ;ret                                                ;; 03:43db $c9
+    call spawnNPC                                      ;; 03:43d8 $cd $bd $42
+    ret                                                ;; 03:43db $c9
 
 npcLoadTiles:
     ld   L, A                                          ;; 03:43dc $6f
@@ -822,115 +818,44 @@ setNpcSpawnTable:
     ret                                                ;; 03:4487 $c9
 
 selectRandomNpcPlacement:
-   ld A, [wSpawnPlacementScratch]
-   ld C, A
-   call getRandomInRange
-   add A, A
-   cpl
-   ld C, A
-   ld A, B ; B guaranteed to be 0 coming out of getRandomInRange
-   rla
-   cpl
-   ld B, A
-   inc BC
-   ld HL, wSpawnPlacementScratch+329
-   add HL, BC
-   ld A, [HL+]
-   ld D, [HL]
-   ld E, A
-   ret
+    ld A, [wSpawnPlacementScratch]
+    ld C, A
+    call getRandomInRange
+    add A, A
+    cpl
+    ld C, A
+    ld A, B ; B guaranteed to be 0 coming out of getRandomInRange
+    rla
+    cpl
+    ld B, A
+    inc BC
+    ld HL, wSpawnPlacementScratch+329
+    add HL, BC
+    ld A, [HL+]
+    ld D, [HL]
+    ld E, A
+    ret
 
-;; C = npc type
-;; DE = yx tile coordinate
-;; Checks that the given coordinate is valid for the given npc type to move on, and that it is a minimum distance from the player.
-;; Return: Z, fail, NZ, success.
-;checkNpcPotentialPlacement:
-;    push HL                                            ;; 03:4488 $e5
-;    push BC                                            ;; 03:4489 $c5
-;    push DE                                            ;; 03:448a $d5
-;    ld   A, C                                          ;; 03:448b $79
-;    ld   L, A                                          ;; 03:448c $6f
-;    ld   H, $00                                        ;; 03:448d $26 $00
-;    ld   E, L                                          ;; 03:448f $5d
-;    ld   D, H                                          ;; 03:4490 $54
-;    add  HL, DE                                        ;; 03:4491 $19
-;    add  HL, DE                                        ;; 03:4492 $19
-;    add  HL, HL                                        ;; 03:4493 $29
-;    add  HL, HL                                        ;; 03:4494 $29
-;    add  HL, HL                                        ;; 03:4495 $29
-;    ld   DE, npcDataTable                              ;; 03:4496 $11 $5a $5f
-;    add  HL, DE                                        ;; 03:4499 $19
-;    ld   A, [HL]                                       ;; 03:449a $7e
-;    pop  DE                                            ;; 03:449b $d1
-;    push DE                                            ;; 03:449c $d5
-;    call checkObjectTileCollisions                     ;; 03:449d $cd $c0 $18
-;    pop  DE                                            ;; 03:44a0 $d1
-;    pop  BC                                            ;; 03:44a1 $c1
-;    pop  HL                                            ;; 03:44a2 $e1
-;    ret  Z                                             ;; 03:44a3 $c8
-;    push HL                                            ;; 03:44a4 $e5
-;    push BC                                            ;; 03:44a5 $c5
-;    push DE                                            ;; 03:44a6 $d5
-;    ld   C, $04                                        ;; 03:44a7 $0e $04
-;    call getObjectNearestTilePosition                  ;; 03:44a9 $cd $ef $05
-;    pop  HL                                            ;; 03:44ac $e1
-;    push HL                                            ;; 03:44ad $e5
-;    ld   A, D                                          ;; 03:44ae $7a
-;    sub  A, H                                          ;; 03:44af $94
-;    jr   NC, .jr_03_44b4                               ;; 03:44b0 $30 $02
-;    cpl                                                ;; 03:44b2 $2f
-;    inc  A                                             ;; 03:44b3 $3c
-;.jr_03_44b4:
-;    cp   A, $04                                        ;; 03:44b4 $fe $04
-;    jr   NC, .success                                  ;; 03:44b6 $30 $0f
-;    ld   A, E                                          ;; 03:44b8 $7b
-;    sub  A, L                                          ;; 03:44b9 $95
-;    jr   NC, .jr_03_44be                               ;; 03:44ba $30 $02
-;    cpl                                                ;; 03:44bc $2f
-;    inc  A                                             ;; 03:44bd $3c
-;.jr_03_44be:
-;    cp   A, $04                                        ;; 03:44be $fe $04
-;    jr   NC, .success                                  ;; 03:44c0 $30 $05
-;    xor  A, A                                          ;; 03:44c2 $af
-;    pop  DE                                            ;; 03:44c3 $d1
-;    pop  BC                                            ;; 03:44c4 $c1
-;    pop  HL                                            ;; 03:44c5 $e1
-;    ret                                                ;; 03:44c6 $c9
-;.success:
-;    xor  A, A                                          ;; 03:44c7 $af
-;    dec  A                                             ;; 03:44c8 $3d
-;    pop  DE                                            ;; 03:44c9 $d1
-;    pop  BC                                            ;; 03:44ca $c1
-;    pop  HL                                            ;; 03:44cb $e1
-;    ret                                                ;; 03:44cc $c9
-;
-;; Return: DE = random yx tile number between (02,02) and ($0c,$10)
-;getRandomTile:
-;    push HL                                            ;; 03:44cd $e5
-;    push BC                                            ;; 03:44ce $c5
-;.loop_1:
-;    call getRandomByte                                 ;; 03:44cf $cd $1e $2b
-;    and  A, $0f                                        ;; 03:44d2 $e6 $0f
-;    cp   A, $0f                                        ;; 03:44d4 $fe $0f
-;    jr   NC, .loop_1                                   ;; 03:44d6 $30 $f7
-;    add  A, $02                                        ;; 03:44d8 $c6 $02
-;    ld   E, A                                          ;; 03:44da $5f
-;    push DE                                            ;; 03:44db $d5
-;.loop_2:
-;    call getRandomByte                                 ;; 03:44dc $cd $1e $2b
-;    and  A, $0f                                        ;; 03:44df $e6 $0f
-;    cp   A, $0b                                        ;; 03:44e1 $fe $0b
-;    jr   NC, .loop_2                                   ;; 03:44e3 $30 $f7
-;    add  A, $02                                        ;; 03:44e5 $c6 $02
-;    pop  DE                                            ;; 03:44e7 $d1
-;    ld   D, A                                          ;; 03:44e8 $57
-;    pop  BC                                            ;; 03:44e9 $c1
-;    pop  HL                                            ;; 03:44ea $e1
-;    inc  A                                             ;; 03:44eb $3c
-;    ret                                                ;; 03:44ec $c9
+prepareNpcPlacementOptionsSetup:
+    ; Get object collision flag based on NPC type, put it in A
+    ld A, C
+    ld L, A
+    ld H, $00
+    ld E, L
+    ld D, H
+    add HL, DE
+    add HL, DE
+    add HL, HL
+    add HL, HL
+    add HL, HL
+    ld DE, npcDataTable
+    add HL, DE
+    ld A, [HL]
+    jp prepareNpcPlacementOptions_trampoline ;3
+
+ds 59 ; spare bytes, use as desired
 
 spawnNpcsFromTable:
-    DBGMSGLOC debugMsg1
     push HL                                            ;; 03:44ed $e5
     push AF                                            ;; 03:44ee $f5
     add  A, A                                          ;; 03:44ef $87
@@ -959,95 +884,71 @@ spawnNpcsFromTable:
     push HL                                            ;; 03:450c $e5
     ld   C, A                                          ;; 03:450d $4f
     ; BC holds min and max-min spawn quantity
-    ; push/pop BC unnecessary
-    ;push BC                                            ;; 03:450e $c5
-    call getRandomByte                                 ;; 03:450f $cd $1e $2b
-    ;pop  BC                                            ;; 03:4512 $c1
-    inc  C                                             ;; 03:4513 $0c
-    ld   L, C                                          ;; 03:4514 $69
-    ld   H, $00                                        ;; 03:4515 $26 $00
-    push BC                                            ;; 03:4517 $c5
-    call MultiplyHL_by_A                               ;; 03:4518 $cd $7b $2b
-    ld   A, H                                          ;; 03:451b $7c
-    pop  BC                                            ;; 03:451c $c1
-    add  A, B                                          ;; 03:451d $80
+    call getRandomByte
+    inc  C
+    ld   L, C
+    ld   H, $00
+    push BC
+    call MultiplyHL_by_A
+    ld   A, H
+    pop  BC
+    add  A, B
     ; load number of spawns in B
-    ld   B, A                                          ;; 03:451e $47
-    pop  HL                                            ;; 03:451f $e1
+    ld   B, A
+    pop  HL
 .spawn_fixed_amount:
-    ld   DE, $04                                       ;; 03:4520 $11 $04 $00
-    add  HL, DE                                        ;; 03:4523 $19
-    pop  AF                                            ;; 03:4524 $f1
+    ld   DE, $04
+    add  HL, DE
+    pop  AF
     ; load spawnNPC column in E, quantity in A
-    ld   E, A                                          ;; 03:4525 $5f
-    ld   A, B                                          ;; 03:4526 $78
-    or   A, A                                          ;; 03:4527 $b7
+    ld   E, A
+    ld   A, B
+    or   A, A
     ; If none to spawn, return
-    jr   Z, .return                                    ;; 03:4528 $28 $1f
+    jr   Z, .return
     ; points to spawn table at locations
-    push HL                                            ;; 03:452a $e5
-    ld   D, $00                                        ;; 03:452b $16 $00
-    ld   HL, wNPCSpawnTypes                            ;; 03:452d $21 $a8 $c5
-    add  HL, DE                                        ;; 03:4530 $19
+    push HL
+    ld   D, $00
+    ld   HL, wNPCSpawnTypes
+    add  HL, DE
     ; load the NPC type into C
-    ld   C, [HL]                                       ;; 03:4531 $4e
-    pop  HL                                            ;; 03:4532 $e1
+    ld   C, [HL]
+    pop  HL
 .loop:
     ; load NPC position into DE
     ; if either entry is $80, pick a random location
-    ld   E, [HL]                                       ;; 03:4533 $5e
-    inc  HL                                            ;; 03:4534 $23
-    ld   D, [HL]                                       ;; 03:4535 $56
-    inc  HL                                            ;; 03:4536 $23
-    ld   A, $80                                        ;; 03:4537 $3e $80
-    cp   A, D                                          ;; 03:4539 $ba
-    jr   Z, .random_location                           ;; 03:453a $28 $0f
-    cp   A, E                                          ;; 03:453c $bb
-    jr   Z, .random_location                           ;; 03:453d $28 $0c
-    push BC                                            ;; 03:453f $c5
-    push HL                                            ;; 03:4540 $e5
-    call spawnNPC                                      ;; 03:4541 $cd $bd $42
-    pop  HL                                            ;; 03:4544 $e1
-    pop  BC                                            ;; 03:4545 $c1
-    dec  B                                             ;; 03:4546 $05
-    jr   NZ, .loop                                     ;; 03:4547 $20 $ea
+    ld   E, [HL]
+    inc  HL
+    ld   D, [HL]
+    inc  HL
+    ld   A, $80
+    cp   A, D
+    jr   Z, .random_location
+    cp   A, E
+    jr   Z, .random_location
+    push BC
+    push HL
+    call spawnNPC
+    pop  HL
+    pop  BC
+    dec  B
+    jr   NZ, .loop
 .return:
-    pop  HL                                            ;; 03:4549 $e1
-    ret                                                ;; 03:454a $c9
+    pop  HL
+    ret
 .random_location:
     push BC
-    ; Get object collision flag based on NPC type, put it in A
-    ld A, C
-    ld L, A
-    ld H, $00
-    ld E, L
-    ld D, H
-    add HL, DE
-    add HL, DE
-    add HL, HL
-    add HL, HL
-    add HL, HL
-    ld DE, npcDataTable
-    add HL, DE
-    ld A, [HL]
-    call prepareNpcPlacementOptions_trampoline
+    call prepareNpcPlacementOptionsSetup
     pop BC
-    DBGMSGLOC debugMsg2
 .random_loop:
     push BC
     call selectRandomNpcPlacement
     pop BC
-    ;call getRandomTile                                 ;; 03:454b $cd $cd $44
-    ;call checkNpcPotentialPlacement                    ;; 03:454e $cd $88 $44
-    ;jr   Z, .random_location                           ;; 03:4551 $28 $f8
-    push DE
     push BC                                            ;; 03:4553 $c5
     call spawnNPC                                      ;; 03:4554 $cd $bd $42
     pop  BC                                            ;; 03:4557 $c1
-    pop  DE
     dec  B                                             ;; 03:4558 $05
-    DBGMSGLOC debugMsg3
-    jr   NZ, .random_loop                              ;; 03:4559 $20 $f0
+    jr   NZ, .random_loop
     pop  HL                                            ;; 03:455b $e1
     ret                                                ;; 03:455c $c9
 
@@ -2038,19 +1939,16 @@ getNpcElementalImmunities:
     ret                                                ;; 03:4aec $c9
 
 moveGridlessObject_3:
-    jp moveGridlessObject
-    ;call moveGridlessObject                            ;; 03:4aed $cd $d4 $08
-    ;ret                                                ;; 03:4af0 $c9
+    call moveGridlessObject                            ;; 03:4aed $cd $d4 $08
+    ret                                                ;; 03:4af0 $c9
 
 updateObjectPosition_3:
-    jp updateObjectPosition
-    ;call updateObjectPosition                          ;; 03:4af1 $cd $11 $06
-    ;ret                                                ;; 03:4af4 $c9
+    call updateObjectPosition                          ;; 03:4af1 $cd $11 $06
+    ret                                                ;; 03:4af4 $c9
 
 processPhysicsForObject_3:
-    jp processPhysicsForObject
-    ;call processPhysicsForObject                       ;; 03:4af5 $cd $95 $06
-    ;ret                                                ;; 03:4af8 $c9
+    call processPhysicsForObject                       ;; 03:4af5 $cd $95 $06
+    ret                                                ;; 03:4af8 $c9
 
 ; C = npc number
 ; DE = YX coordinates

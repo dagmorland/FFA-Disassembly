@@ -1582,15 +1582,19 @@ wD8DA:
 wDualCharacterScratch:
     ds 3                                               ;; d8db
 
+; 2-byte pairs of all 80 metatiles, pulled from the metatile data
+; and cached for faster access
 wMetatileAttributeCache:
     ds 160
 
+; Used as scratch space for the spawnNpcsFromTable routine in bank03
 ; First byte holds number of options (up to 165)
-; Subsequent 2-byte pairs provide a spawn location option (x followed by y). This space can be reused for scratch space in its entirety outside of the spawnNpcsFromTable function.
+; Subsequent 2-byte pairs provide a spawn location option (x followed by y).
+; This space can be reused for scratch space in its entirety outside of the spawnNpcsFromTable function.
 wSpawnPlacementScratch:
     ds 331
 
-; Unused and ready for future features!
+; Unused and ready for future features
 wUnused:
     ds 1335
 
@@ -1645,7 +1649,16 @@ hSoundEffectLoopCounterChannel1:
 ; END OF AUDIO ENGINE HRAM (ff9e is not included)
 ; One byte long
 hSoundEffectLoopCounterChannel4:
-    ds 93                                               ;; ff9d
+    ds 1                                               ;; ff9d
+
+; Used for a high byte in conjunction with the timer interrupt
+; See isrTimer in bank00 for details of use
+hTimerHigh:
+    ds 1
+
+; Unused and ready for future features
+hUnused:
+    ds 91
 
 ; These next three are used as values for signed math. BadBoy understands this, yet still adds them here.
 hUnusedFFFA:

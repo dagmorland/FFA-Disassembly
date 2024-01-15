@@ -4,7 +4,6 @@ INCLUDE "include/hardware.inc"
 INCLUDE "include/macros.inc"
 INCLUDE "include/charmaps.inc"
 INCLUDE "include/constants.inc"
-INCLUDE "include/debug.inc"
 
 SECTION "bank00", ROM0[$0000]
     db   $c3, $50, $01                                 ;; 00:0000 ???
@@ -23,11 +22,15 @@ isrLCDC:
 
 SECTION "isrTimer", ROM0[$0050]
 
+; Increments a high byte in HRAM
+; Function is exactly 8 bytes, allowing it to remain in its
+; designated section without an additional call.
+; Per line comments are cycles/bytes
 isrTimer:
     push AF ;4/1
-    ldh a, [$ff9e] ;3/2
+    ldh a, [hTimerHigh] ;3/2
     inc a ;1/1
-    ldh [$ff9e], a ;3/2
+    ldh [hTimerHigh], a ;3/2
     pop AF ;3/1
     reti ;4/1
 
@@ -956,6 +959,8 @@ getObjectNearestTilePosition:
     add  HL, HL                                        ;; 00:05f3 $29
     add  HL, HL                                        ;; 00:05f4 $29
     add  HL, HL                                        ;; 00:05f5 $29
+    ; swapped out use of BC since it was unnecessary
+    ; callers can now avoid push/pop of BC if desired
     ld   DE, wObjectRuntimeData
     add  HL, DE
     ld   DE, $04                                       ;; 00:05fa $11 $04 $00
@@ -3857,28 +3862,28 @@ scriptOpWaitWhileMovement:
 ; E = object x tile coordinate
 ; Return: HL = tile attributes
 getRoomMetaTileAttributes:
-    ld   A, E                                          ;; 00:16b6 $7b
-    cp   A, $14                                        ;; 00:16b7 $fe $14
-    jr   C, .jr_00_16c5                                ;; 00:16b9 $38 $0a
-    bit  7, E                                          ;; 00:16bb $cb $7b
-    jr   NZ, .jr_00_16c3                               ;; 00:16bd $20 $04
-    ld   E, $13                                        ;; 00:16bf $1e $13
-    jr   .jr_00_16c5                                   ;; 00:16c1 $18 $02
+    ld   A, E
+    cp   A, $14
+    jr   C, .jr_00_16c5
+    bit  7, E
+    jr   NZ, .jr_00_16c3
+    ld   E, $13
+    jr   .jr_00_16c5
 .jr_00_16c3:
-    ld   E, $00                                        ;; 00:16c3 $1e $00
+    ld   E, $00
 .jr_00_16c5:
-    ld   A, D                                          ;; 00:16c5 $7a
-    cp   A, $10                                        ;; 00:16c6 $fe $10
-    jr   C, .jr_00_16d4                                ;; 00:16c8 $38 $0a
-    bit  7, D                                          ;; 00:16ca $cb $7a
-    jr   NZ, .jr_00_16d2                               ;; 00:16cc $20 $04
-    ld   D, $0f                                        ;; 00:16ce $16 $0f
-    jr   .jr_00_16d4                                   ;; 00:16d0 $18 $02
+    ld   A, D
+    cp   A, $10
+    jr   C, .jr_00_16d4
+    bit  7, D
+    jr   NZ, .jr_00_16d2
+    ld   D, $0f
+    jr   .jr_00_16d4
 .jr_00_16d2:
-    ld   D, $00                                        ;; 00:16d2 $16 $00
+    ld   D, $00
 .jr_00_16d4:
-    srl  D                                             ;; 00:16d4 $cb $3a
-    srl  E                                             ;; 00:16d6 $cb $3b
+    srl  D
+    srl  E
     ld HL, wMetatileAttributeCache
     ld   A, D
     add  A, A
@@ -3894,61 +3899,9 @@ getRoomMetaTileAttributes:
     ld A, [HL+]
     ld H, [HL]
     ld L, A
-    ret                                                ;; 00:16f8 $c9
+    ret
 
-;; D = object y tile coordinate
-;; E = object x tile coordinate
-;; Return: HL = tile attributes
-;getRoomMetaTileAttributes:
-;    push DE                                            ;; 00:16af $d5
-;    ld   A, BANK(metatilesOutdoor) ;@=bank metatilesOutdoor ;; 00:16b0 $3e $08
-;    call pushBankNrAndSwitch                           ;; 00:16b2 $cd $fb $29
-;    pop  DE                                            ;; 00:16b5 $d1
-;    ld   A, E                                          ;; 00:16b6 $7b
-;    cp   A, $14                                        ;; 00:16b7 $fe $14
-;    jr   C, .jr_00_16c5                                ;; 00:16b9 $38 $0a
-;    bit  7, E                                          ;; 00:16bb $cb $7b
-;    jr   NZ, .jr_00_16c3                               ;; 00:16bd $20 $04
-;    ld   E, $13                                        ;; 00:16bf $1e $13
-;    jr   .jr_00_16c5                                   ;; 00:16c1 $18 $02
-;.jr_00_16c3:
-;    ld   E, $00                                        ;; 00:16c3 $1e $00
-;.jr_00_16c5:
-;    ld   A, D                                          ;; 00:16c5 $7a
-;    cp   A, $10                                        ;; 00:16c6 $fe $10
-;    jr   C, .jr_00_16d4                                ;; 00:16c8 $38 $0a
-;    bit  7, D                                          ;; 00:16ca $cb $7a
-;    jr   NZ, .jr_00_16d2                               ;; 00:16cc $20 $04
-;    ld   D, $0f                                        ;; 00:16ce $16 $0f
-;    jr   .jr_00_16d4                                   ;; 00:16d0 $18 $02
-;.jr_00_16d2:
-;    ld   D, $00                                        ;; 00:16d2 $16 $00
-;.jr_00_16d4:
-;    srl  D                                             ;; 00:16d4 $cb $3a
-;    srl  E                                             ;; 00:16d6 $cb $3b
-;    call getRoomMetaTile                               ;; 00:16d8 $cd $26 $24
-;    ld   L, A                                          ;; 00:16db $6f
-;    ld   H, $00                                        ;; 00:16dc $26 $00
-;    ld   D, H                                          ;; 00:16de $54
-;    ld   E, L                                          ;; 00:16df $5d
-;    add  HL, HL                                        ;; 00:16e0 $29
-;    add  HL, DE                                        ;; 00:16e1 $19
-;    add  HL, HL                                        ;; 00:16e2 $29
-;    ld   A, [wTileDataTablePointer.High]               ;; 00:16e3 $fa $93 $d3
-;    ld   D, A                                          ;; 00:16e6 $57
-;    ld   A, [wTileDataTablePointer]                    ;; 00:16e7 $fa $92 $d3
-;    ld   E, A                                          ;; 00:16ea $5f
-;    add  HL, DE                                        ;; 00:16eb $19
-;    ld   DE, $04                                       ;; 00:16ec $11 $04 $00
-;    add  HL, DE                                        ;; 00:16ef $19
-;    ld   A, [HL+]                                      ;; 00:16f0 $2a
-;    ld   H, [HL]                                       ;; 00:16f1 $66
-;    ld   L, A                                          ;; 00:16f2 $6f
-;    push HL                                            ;; 00:16f3 $e5
-;    call popBankNrAndSwitch                            ;; 00:16f4 $cd $0a $2a
-;    pop  HL                                            ;; 00:16f7 $e1
-;    ret                                                ;; 00:16f8 $c9
-;    db   $cd, $0a, $2a, $21, $00, $00, $c9             ;; 00:16f9 ???????
+ds 28 ; spare bytes, use as desired
 
 ; B = object direction bits. If bit 7 is set then the player will not take spike damage.
 ; C = object collision flags
@@ -5475,10 +5428,8 @@ InitPreIntEnable:
     ld   A, $87                                        ;; 00:2080 $3e $87
     ld   [wVideoLCDC], A                               ;; 00:2082 $ea $a5 $c0
     call initMisc                                      ;; 00:2085 $cd $92 $20
-    ld   A, $07                                        ;; 00:2088 $3e $03
+    ld   A, $03                                        ;; 00:2088 $3e $03
     ldh  [rIE], A                                      ;; 00:208a $e0 $ff
-    ld   HL, $FF07
-    set  2, [HL]
     ld   A, [wVideoLCDC]                               ;; 00:208c $fa $a5 $c0
     ldh  [rLCDC], A                                    ;; 00:208f $e0 $40
     ret                                                ;; 00:2091 $c9
@@ -5764,7 +5715,6 @@ drawDoorMetaTiles:
     push BC                                            ;; 00:229e $c5
     ld   HL, wRoomTiles                                ;; 00:229f $21 $50 $c3
     call cacheMetatileAttributesAndLoadRoomTiles
-    ;call loadRoomTiles                                 ;; 00:22a2 $cd $74 $1b
     pop  BC                                            ;; 00:22a5 $c1
     pop  HL                                            ;; 00:22a6 $e1
     ld   E, [HL]                                       ;; 00:22a7 $5e
@@ -6045,8 +5995,7 @@ setRoomTile:
 .jr_00_241d:
     pop  DE                                            ;; 00:241d $d1
     pop  AF                                            ;; 00:241e $f1
-    call updateMetatileAttributeCache
-    ;call drawMetaTile_immediate                        ;; 00:241f $cd $6c $05
+    call updateMetatileAttributeCacheAndDrawImmediate
     call popBankNrAndSwitch                            ;; 00:2422 $cd $0a $2a
     ret                                                ;; 00:2425 $c9
 
@@ -6505,7 +6454,6 @@ call_00_2617:
     call loadRoomMetaTilesTemplated                    ;; 00:26b9 $cd $5d $25
 .jr_00_26bc:
     call cacheMetatileAttributesAndLoadRoomTiles
-    ;call loadRoomTiles                                 ;; 00:26bc $cd $74 $1b
     call popBankNrAndSwitch                            ;; 00:26bf $cd $0a $2a
     pop  DE                                            ;; 00:26c2 $d1
     pop  HL                                            ;; 00:26c3 $e1
@@ -6595,7 +6543,6 @@ loadMap:
     ld   [wRoomScriptTableLow], A                      ;; 00:2752 $ea $fe $c3
     call loadRoomMetaTilesRLE                          ;; 00:2755 $cd $2b $24
     call cacheMetatileAttributesAndLoadRoomTiles
-    ;call loadRoomTiles                                 ;; 00:2758 $cd $74 $1b
     call popBankNrAndSwitch                            ;; 00:275b $cd $0a $2a
     ret                                                ;; 00:275e $c9
 .templatedRoom:
@@ -6615,7 +6562,6 @@ loadMap:
     ld   A, $00                                        ;; 00:2776 $3e $00
     call loadRoomMetaTilesTemplated                    ;; 00:2778 $cd $5d $25
     call cacheMetatileAttributesAndLoadRoomTiles
-    ;call loadRoomTiles                                 ;; 00:277b $cd $74 $1b
     call popBankNrAndSwitch                            ;; 00:277e $cd $0a $2a
     ret                                                ;; 00:2781 $c9
 
@@ -6724,15 +6670,7 @@ setNpcSpawnTable_trampoline:
 scriptOpCodeSpawnNPC:
     ld   A, [wScriptOpCounter]                         ;; 00:2820 $fa $99 $d4
     cp   A, $00                                        ;; 00:2823 $fe $00
-    ;ld A, [wNPCSpawnTableIndex]
-    ;cp A, $1E
-    ;ld A, [HL+]                                      ;; 00:2840 $2a
-;    jr Z, .do_dance
-    call Z, spawnNpcsFromTable_trampoline             ;; 00:2825 $cc $40 $28
-;    jr .dont_dance
-;.do_dance:
-;    call Z, doSpawnDance              ;; 00:2825 $cc $40 $28
-;.dont_dance:
+    call Z, spawnNpcsFromTable_trampoline              ;; 00:2825 $cc $40 $28
     ld   A, $01                                        ;; 00:2828 $3e $01
     ld   [wScriptOpCounter], A                         ;; 00:282a $ea $99 $d4
     ld   A, [wTileCopyRequestCount]                    ;; 00:282d $fa $e0 $c8
@@ -6744,91 +6682,6 @@ scriptOpCodeSpawnNPC:
     ld   [wScriptOpCounter], A                         ;; 00:2839 $ea $99 $d4
     call getNextScriptInstruction                      ;; 00:283c $cd $27 $37
     ret                                                ;; 00:283f $c9
-
-doSpawnDance:
-    ;ld   A, [HL+]                                      ;; 00:2840 $2a
-    push BC
-    push AF
-    ldh  A, [rIE]
-    ldh  [$ff9f], A
-    ld   A, 4
-    ldh  [rIE], A
-IF DEF(RNG_ORIGINAL)
-    ld   A, [wRndState0]
-    ldh  [$ffa2], A
-    ld   B, A
-    ld   A, [wRndState1]
-    ldh  [$ffa3], A
-    ld   C, A
-ELIF DEF(RNG_LCG)
-    ld   A, $00
-    ldh  [$ffa2], A
-    ld   B, A
-    ld   A, $00
-    ldh  [$ffa3], A
-    ld   C, A
-    ldh  [$ffa0], A
-    ldh  [$ffa1], A
-    ld  A, [wRndState0]
-    ld  B, A
-    ld  A, [wRndState1]
-    ld  C, A
-    ld  A, [wRndState]
-    ld  D, A
-ENDC
-    xor  A, A
-    push HL
-.profile_loop:
-    pop  HL
-    pop  AF
-    push AF
-    push HL
-    push BC
-	push DE
-    ld A, $01
-    call spawnNpcsFromTable_trampoline
-	pop DE
-    pop BC
-    ld  A, B
-    ld  [wRndState0], A
-    ld  A, C
-    ld  [wRndState1], A
-IF DEF(RNG_LCG)
-    ld  A, D
-    ld  [wRndState], A
-ENDC	
-    call getRandomByte
-    xor A, A
-    ldh [$ffa0], A
-    ldh [$ffa1], A
-    ld  A, [wRndState0]
-    ld  B, A
-    ld  A, [wRndState1]
-    ld  C, A
-IF DEF(RNG_ORIGINAL)
-    ldh A, [$ffa2]
-    cp  A, B
-    jr nz, .profile_loop
-    ldh A, [$ffa3]
-    cp  A, C
-ELIF DEF(RNG_LCG)
-    ld  A, [wRndState]
-    ld  D, A
-    ldh A, [$ffa2]
-	dec A
-	ldh [$ffa2], A
-    jr nz, .profile_loop
-    ldh A, [$ffa3]
-	dec A
-	ldh [$ffa3], A
-ENDC
-    jr nz, .profile_loop
-    ldh  A, [$ff9f]
-    ldh  [rIE], A
-    pop HL
-    pop AF
-    pop BC
-    ret
 
 spawnNpcsFromTable_trampoline:
     ld   A, [HL+]                                      ;; 00:2840 $2a
@@ -7202,94 +7055,11 @@ getCurrentBankNr:
     ld   A, [HL]                                       ;; 00:2a1c $7e
     ret                                                ;; 00:2a1d $c9
 
-IF DEF(RNG_ORIGINAL)
-rndDataTable:
-    db   $c6, $7e, $81, $6b, $4b, $fb, $e2, $54        ;; 00:2a1e ........
-    db   $f6, $bd, $df, $7c, $1c, $e1, $87, $01        ;; 00:2a26 ........
-    db   $bf, $31, $de, $56, $72, $0f, $47, $67        ;; 00:2a2e ........
-    db   $66, $59, $aa, $88, $3c, $ea, $13, $7b        ;; 00:2a36 ........
-    db   $d2, $85, $a1, $d8, $55, $2f, $37, $ae        ;; 00:2a3e ........
-    db   $65, $5b, $da, $02, $79, $98, $cc, $e3        ;; 00:2a46 ........
-    db   $1a, $76, $8e, $5f, $d9, $99, $8f, $1f        ;; 00:2a4e ........
-    db   $3f, $36, $ee, $43, $78, $4d, $0d, $fa        ;; 00:2a56 ........
-    db   $be, $a6, $e4, $86, $dc, $29, $6d, $4e        ;; 00:2a5e ........
-    db   $ff, $70, $20, $b1, $58, $05, $90, $c5        ;; 00:2a66 ........
-    db   $09, $53, $cd, $3b, $48, $52, $d3, $9d        ;; 00:2a6e ........
-    db   $06, $9f, $b5, $c2, $49, $b2, $1e, $ac        ;; 00:2a76 ........
-    db   $32, $9c, $46, $95, $71, $57, $39, $1d        ;; 00:2a7e ........
-    db   $16, $74, $f5, $17, $5c, $41, $bb, $c7        ;; 00:2a86 ........
-    db   $1b, $33, $3d, $91, $c0, $a5, $ab, $8d        ;; 00:2a8e ........
-    db   $5e, $3e, $e6, $68, $3a, $c3, $93, $11        ;; 00:2a96 ........
-    db   $a8, $64, $db, $ca, $e0, $60, $f3, $00        ;; 00:2a9e ........
-    db   $a2, $25, $a0, $21, $d5, $62, $4f, $2e        ;; 00:2aa6 ........
-    db   $94, $b0, $a9, $9e, $5a, $0b, $80, $b6        ;; 00:2aae ........
-    db   $cf, $0c, $2a, $eb, $b7, $24, $23, $92        ;; 00:2ab6 ........
-    db   $a7, $d7, $8c, $63, $44, $f9, $ba, $73        ;; 00:2abe ........
-    db   $5d, $19, $e5, $51, $75, $9a, $69, $ef        ;; 00:2ac6 ........
-    db   $6f, $42, $f7, $45, $38, $10, $fd, $07        ;; 00:2ace ........
-    db   $27, $7d, $d4, $61, $f1, $04, $15, $9b        ;; 00:2ad6 ........
-    db   $83, $a4, $8b, $12, $50, $d6, $ad, $4a        ;; 00:2ade ........
-    db   $dd, $e9, $03, $26, $2c, $14, $96, $c8        ;; 00:2ae6 ........
-    db   $d1, $6c, $b3, $35, $c9, $af, $4c, $7f        ;; 00:2aee ........
-    db   $ce, $c1, $ed, $8a, $2d, $28, $30, $e7        ;; 00:2af6 ........
-    db   $08, $77, $b4, $f8, $22, $7a, $6a, $34        ;; 00:2afe ........
-    db   $fe, $bc, $89, $f4, $6e, $0a, $2b, $fc        ;; 00:2b06 ........
-    db   $84, $c4, $cb, $b9, $18, $f2, $d0, $a3        ;; 00:2b0e ........
-    db   $f0, $82, $b8, $e8, $40, $0e, $ec, $97        ;; 00:2b16 ........
-
-getRandomByte:
-    push DE                                            ;; 00:2b1e $d5
-    ldh  A, [$ffa0]
-    inc  A
-    ldh  [$ffa0], A
-    jr   nz, .skip_extra_inc
-    ldh  A, [$ffa1]
-    inc  A
-    ldh  [$ffa1], A
-.skip_extra_inc:
-    ld   A, [wRndState0]                               ;; 00:2b1f $fa $b0 $c0
-    inc  A                                             ;; 00:2b22 $3c
-    ld   [wRndState0], A                               ;; 00:2b23 $ea $b0 $c0
-    ld   L, A                                          ;; 00:2b26 $6f
-    ld   A, [wRndState1]                               ;; 00:2b27 $fa $b1 $c0
-    cp   A, L                                          ;; 00:2b2a $bd
-    jr   NZ, .jr_00_2b31                               ;; 00:2b2b $20 $04
-    dec  A                                             ;; 00:2b2d $3d
-    ld   [wRndState1], A                               ;; 00:2b2e $ea $b1 $c0
-.jr_00_2b31:
-    ld   H, $00                                        ;; 00:2b31 $26 $00
-    ld   DE, rndDataTable                              ;; 00:2b33 $11 $1e $2a
-    add  HL, DE                                        ;; 00:2b36 $19
-    ld   H, [HL]                                       ;; 00:2b37 $66
-    ld   L, A                                          ;; 00:2b38 $6f
-    ld   A, H                                          ;; 00:2b39 $7c
-    ld   H, $00                                        ;; 00:2b3a $26 $00
-    add  HL, DE                                        ;; 00:2b3c $19
-    add  A, [HL]                                       ;; 00:2b3d $86
-    pop  DE                                            ;; 00:2b3e $d1
-    ret                                                ;; 00:2b3f $c9
-ELIF DEF(RNG_LCG)
 ; A linear congruential generator RNG.
 ; The original RNG has issues with some values coming up more often than others.
 
 ;getRandomByte:
 INCLUDE "code/rand_ffa.asm"
-;    push bc
-;    push de
-;;    ldh  A, [$ffa0]
-;;    inc  A
-;;    ldh  [$ffa0], A
-;;    jr   nz, .skip_extra_inc
-;;    ldh  A, [$ffa1]
-;;    inc  A
-;;    ldh  [$ffa1], A
-;;.skip_extra_inc:
-;INCLUDE "code/rand2.asm"
-    ;DBGMSG "%A% %AF&0080>0% %AF&0040>0% %AF&0020>0% %AF&0010>0%"
-    ;DBGMSG "%AF% %AF&0080%1;0; %AF&0040%1;0; %AF&0020%1;0; %AF&0010%1;0;"
-;    pop de
-;    pop bc
-;    ret
 
 ; Get a uniform random number on [0,C)
 ; Output:
@@ -7329,7 +7099,7 @@ MultiplyDE_by_C_24bit:
     jr NZ, .loop
     ret
 
-updateMetatileAttributeCache:
+updateMetatileAttributeCacheAndDrawImmediate:
     push AF
     ld A, BANK(metatilesOutdoor)
     call pushBankNrAndSwitch
@@ -7447,7 +7217,7 @@ callFunctionInBank0E:
 prepareNpcPlacementOptions_trampoline:
     jp_to_bank 0E, prepareNpcPlacementOptions
 
-ENDC
+ds 47 ; spare bytes, use as desired
 
 CopyHL_to_DE_size_BC:
     ld   A, B                                          ;; 00:2b40 $78
@@ -9420,6 +9190,9 @@ getDialogTextInsertionPoint:
     ld   A, [wWindowTextSpaceLeftOnLine]               ;; 00:375f $fa $ba $d8
     ld   C, A                                          ;; 00:3762 $4f
     ret                                                ;; 00:3763 $c9
+    db   $d5, $3e, $7f, $15, $cd, $44, $38, $14        ;; 00:3764 ????????
+    db   $3e, $7f, $cd, $44, $38, $1c, $05, $20        ;; 00:376c ????????
+    db   $f0, $d1, $c9                                 ;; 00:3774 ???
 
 ; Draw text
 ; HL = pointer to text
@@ -9574,6 +9347,8 @@ storeTileAatDialogPositionDE:
     call storeTileAatScreenPositionDE                  ;; 00:3851 $cd $91 $38
     pop  DE                                            ;; 00:3854 $d1
     ret                                                ;; 00:3855 $c9
+    db   $d5, $fa, $a7, $d4, $83, $5f, $fa, $a8        ;; 00:3856 ????????
+    db   $d4, $82, $57, $cd, $a7, $38, $d1, $c9        ;; 00:385e ????????
 
 storeTileAatWindowPositionDE:
     push BC                                            ;; 00:3866 $c5
@@ -9583,6 +9358,8 @@ storeTileAatWindowPositionDE:
     call storeTileAatScreenPositionDE                  ;; 00:386c $cd $91 $38
     pop  BC                                            ;; 00:386f $c1
     ret                                                ;; 00:3870 $c9
+    db   $c5, $cd, $7a, $38, $cd, $a7, $38, $c1        ;; 00:3871 ????????
+    db   $c9                                           ;; 00:3879 ?
 
 windowTilePositionToScreenTilePosition:
     ld   A, [wVideoWY]                                 ;; 00:387a $fa $a9 $c0
@@ -9617,6 +9394,9 @@ storeTileAatScreenPositionDE:
     pop  DE                                            ;; 00:38a4 $d1
     pop  BC                                            ;; 00:38a5 $c1
     ret                                                ;; 00:38a6 $c9
+    db   $c5, $d5, $e5, $cd, $bb, $38, $38, $05        ;; 00:38a7 ????????
+    db   $cd, $85, $04, $18, $03, $cd, $8a, $1d        ;; 00:38af ????????
+    db   $e1, $d1, $c1, $c9                            ;; 00:38b7 ????
 
 ; Convert DE (Y,X) tile position into VRAM memory location if it is on the window.
 ; Carry flag is cleared if the address is on the window, else the carry flag is set.
@@ -10459,6 +10239,11 @@ addMoney:
     ld   [wMoneyLow], A                                ;; 00:3d87 $ea $be $d7
     call drawMoneyOnStatusBarTrampoline                ;; 00:3d8a $cd $17 $31
     ret                                                ;; 00:3d8d $c9
+    db   $d5, $fa, $bf, $d7, $57, $fa, $be, $d7        ;; 00:3d8e ????????
+    db   $5f, $7b, $95, $6f, $7a, $9c, $67, $30        ;; 00:3d96 ????????
+    db   $03, $21, $00, $00, $7c, $ea, $bf, $d7        ;; 00:3d9e ????????
+    db   $7d, $ea, $be, $d7, $cd, $17, $31, $d1        ;; 00:3da6 ????????
+    db   $c9                                           ;; 00:3dae ?
 
 ; The Japanese version did not have the overflow check resulting in high level Flare doing little or no damage
 getTotalMagicPower:
@@ -10498,6 +10283,8 @@ getEquippedElementalResistances:
     or   A, B                                          ;; 00:3ddb $b0
     pop  BC                                            ;; 00:3ddc $c1
     ret                                                ;; 00:3ddd $c9
+    db   $cd, $f9, $30, $c5, $47, $fa, $b6, $d7        ;; 00:3dde ????????
+    db   $80, $c1, $c9                                 ;; 00:3de6 ???
 
 getEquippedWeaponBonusTypes_wrapped:
     call getEquippedWeaponBonusTypes_trampoline        ;; 00:3de9 $cd $f3 $30
@@ -10716,4 +10503,3 @@ dualCharMapping:
     TXT  "ghcaaiirm Lerdig"                            ;; 00:3fcd ............??..
     TXT  "ulhtba l Gnota H"                            ;; 00:3fdd ................
     TXT  "etwe Se!wiHEcknt"                            ;; 00:3fed ..........??....
-

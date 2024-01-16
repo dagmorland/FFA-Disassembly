@@ -7151,38 +7151,41 @@ updateMetatileAttributeCacheAndDrawImmediate:
 cacheMetatileAttributesAndLoadRoomTiles:
     ld A, BANK(metatilesOutdoor)
     call pushBankNrAndSwitch
-    ld B, $50
-    ld C, $00
-    ld HL, wMetatileAttributeCache
-.loop:
-    push HL
-    ld HL, wRoomTiles
-    ld E, C
-    ld D, $00
-    add HL, DE
-    ld L, [HL]
-    ld H, $00
-    ld D, H
-    ld E, L
-    add HL, HL
-    add HL, DE
-    add HL, HL
-    ld A, [wTileDataTablePointer.High]
-    ld D, A
-    ld A, [wTileDataTablePointer]
-    ld E, A
-    add HL, DE
-    ld DE, $04
-    add HL, DE
+    ld [wStackPointerBackupLow], SP
+    ld HL, wMetatileAttributeCache+160
+    ld SP, HL+0
+    ld DE, wRoomTiles+80
+    ld HL, wTileDataTablePointer
     ld A, [HL+]
-    ld D, [HL]
-    pop HL
-    ld [HL+], A
-    ld [HL], D
-    inc HL
-    inc C
-    dec B
+    ld B, [HL]
+    ld C, A
+.loop:
+    dec DE
+    ld A, [DE]
+    ld L, A
+    ld H, $00
+    push BC
+    ld C, L
+    ld B, H
+    add HL, HL
+    add HL, BC
+    add HL, HL
+    ld C, $04
+    add HL, BC
+    pop BC
+    add HL, BC
+    ld A, [HL+]
+    ld H, [HL]
+    ld L, A
+    push HL
+    ld A, E
+    cp A, LOWER(wRoomTiles)
     jr NZ, .loop
+    ld HL, wStackPointerBackupLow
+    ld A, [HL+]
+    ld H, [HL]
+    ld L, A
+    ld SP, HL
     call popBankNrAndSwitch
     ld HL, wRoomTiles
     jp loadRoomTiles

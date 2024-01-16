@@ -7153,7 +7153,7 @@ cacheMetatileAttributesAndLoadRoomTiles:
     call pushBankNrAndSwitch
     ld [wStackPointerBackupLow], SP
     ld HL, wMetatileAttributeCache+160
-    ld SP, HL+0
+    ld SP, HL
     ld DE, wRoomTiles+80
     ld HL, wTileDataTablePointer
     ld A, [HL+]
@@ -7179,7 +7179,7 @@ cacheMetatileAttributesAndLoadRoomTiles:
     ld L, A
     push HL
     ld A, E
-    cp A, LOWER(wRoomTiles)
+    cp A, LOW(wRoomTiles)
     jr NZ, .loop
     ld HL, wStackPointerBackupLow
     ld A, [HL+]

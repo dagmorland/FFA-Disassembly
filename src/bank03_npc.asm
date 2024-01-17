@@ -818,19 +818,27 @@ setNpcSpawnTable:
     ret                                                ;; 03:4487 $c9
 
 selectRandomNpcPlacement:
+    ; Load the number of potential placements
     ld A, [wSpawnPlacementScratch]
     ld C, A
+
+    ; Choose which placement to pick
     call getRandomInRange
-    add A, A
+
+    ; We want to subtract from the end of the array,
+    ; so apply the complement trick in 16-bit.
+    ; We don't increment since that's accounted for by the
+    ; pointer location loaded into HL.
     cpl
     ld C, A
-    ld A, B ; B guaranteed to be 0 coming out of getRandomInRange
-    rla
-    cpl
-    ld B, A
-    inc BC
-    ld HL, wSpawnPlacementScratch+329
+    dec B ; B is guaranteed to be 0 coming out of getRandomInRange
+
+    ; Load a pointer to just past the end of the array
+    ld HL, wSpawnPlacementScratch+331
     add HL, BC
+    add HL, BC
+
+    ; Load the placement location
     ld A, [HL+]
     ld D, [HL]
     ld E, A
@@ -848,12 +856,12 @@ prepareNpcPlacementOptionsSetup:
     add HL, HL
     add HL, HL
     add HL, HL
-    ld DE, npcDataTable
+    ld DE, npcDataTable ; located in bank03
     add HL, DE
     ld A, [HL]
     jp prepareNpcPlacementOptions_trampoline ;3
 
-ds 59 ; spare bytes, use as desired
+ds 63 ; spare bytes, use as desired
 
 spawnNpcsFromTable:
     push HL                                            ;; 03:44ed $e5

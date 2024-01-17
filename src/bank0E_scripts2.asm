@@ -6195,10 +6195,7 @@ prepareNpcPlacementOptions:
 
     ; Load in the scratch location into the stack pointer for fast writes
     ld HL, wSpawnPlacementScratch+331
-    ld A, [rIE]
-    ld [wSpawnPlacementScratch], A
-    and A, $04
-    ld [rIE], A
+    di
     ld SP, HL
 
     ; Loop over position potentials and check for suitability
@@ -6362,8 +6359,7 @@ prepareNpcPlacementOptions:
     ld H, [HL]
     ld L, A
     ld SP, HL
-    ld A, [wSpawnPlacementScratch]
-    ld [rIE], A
+    ei
 
     ld HL, wSpawnPlacementScratch+331
     call sub_HL_DE

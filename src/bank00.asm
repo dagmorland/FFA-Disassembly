@@ -3862,46 +3862,51 @@ scriptOpWaitWhileMovement:
 ; E = object x tile coordinate
 ; Return: HL = tile attributes
 getRoomMetaTileAttributes:
+    ; Account for requests outside the current screen
+    ; This can happen for projectiles in particular
     ld   A, E
     cp   A, $14
-    jr   C, .jr_00_16c5
+    jr   C, .x_pos_on_screen
     bit  7, E
-    jr   NZ, .jr_00_16c3
-    ld   E, $13
-    jr   .jr_00_16c5
-.jr_00_16c3:
-    ld   E, $00
-.jr_00_16c5:
+    jr   NZ, .tile_left_of_screen
+    ld   E, $13 ; use the right-most tile position
+    jr   .x_pos_on_screen
+.tile_left_of_screen:
+    ld   E, $00 ; use the left-most tile position
+.x_pos_on_screen:
     ld   A, D
     cp   A, $10
-    jr   C, .jr_00_16d4
+    jr   C, .y_pos_on_screen
     bit  7, D
-    jr   NZ, .jr_00_16d2
-    ld   D, $0f
-    jr   .jr_00_16d4
-.jr_00_16d2:
-    ld   D, $00
-.jr_00_16d4:
-    srl  D
+    jr   NZ, .tile_above_screen
+    ld   D, $0f ; use the bottom-most tile position
+    jr   .y_pos_on_screen
+.tile_above_screen:
+    ld   D, $00 ; use the top-most tile position
+.y_pos_on_screen:
+
+    ; Metatiles are on 16px boundaries vs the 8px position grid
+    res 0, D ; optimization for the indexing logic below
     srl  E
+
+    ; Index into the wMetaTileAttributeCache with 2*(10*D+E)
     ld HL, wMetatileAttributeCache
-    ld   A, D
-    add  A, A
-    ld   C, A
-    add  A, A
-    add  A, A
-    add  A, C
-    add  A, E
-    ld   E, A
-    ld   D, $00
-    add  HL, DE
-    add  HL, DE
+    ld A, D
+    add A, A
+    add A, A
+    add A, D
+    add A, E
+    add A, A
+    ; At this point the max value in A is 2*(10*7+9)=158
+    ld E, A
+    ld D, $00
+    add HL, DE
     ld A, [HL+]
     ld H, [HL]
     ld L, A
     ret
 
-ds 28 ; spare bytes, use as desired
+ds 30 ; Free space
 
 ; B = object direction bits. If bit 7 is set then the player will not take spike damage.
 ; C = object collision flags
@@ -5714,7 +5719,7 @@ drawDoorMetaTiles:
     push HL                                            ;; 00:229d $e5
     push BC                                            ;; 00:229e $c5
     ld   HL, wRoomTiles                                ;; 00:229f $21 $50 $c3
-    call cacheMetatileAttributesAndLoadRoomTiles
+    call loadRoomTiles                                 ;; 00:22a2 $cd $74 $1b
     pop  BC                                            ;; 00:22a5 $c1
     pop  HL                                            ;; 00:22a6 $e1
     ld   E, [HL]                                       ;; 00:22a7 $5e
@@ -5724,14 +5729,14 @@ drawDoorMetaTiles:
     ld   A, C                                          ;; 00:22ab $79
     push HL                                            ;; 00:22ac $e5
     push BC                                            ;; 00:22ad $c5
-    call drawMetaTile_immediate                        ;; 00:22ae $cd $6c $05
+    call updateMetatileAttributeCacheAndDrawImmediate
     pop  BC                                            ;; 00:22b1 $c1
     pop  HL                                            ;; 00:22b2 $e1
     ld   E, [HL]                                       ;; 00:22b3 $5e
     inc  HL                                            ;; 00:22b4 $23
     ld   D, [HL]                                       ;; 00:22b5 $56
     ld   A, B                                          ;; 00:22b6 $78
-    call drawMetaTile_immediate                        ;; 00:22b7 $cd $6c $05
+    call updateMetatileAttributeCacheAndDrawImmediate
     ret                                                ;; 00:22ba $c9
 
 call_00_22bb:
@@ -7099,59 +7104,78 @@ MultiplyDE_by_C_24bit:
     jr NZ, .loop
     ret
 
+; This function updates a specific metatile in the attribute cache
+; before calling drawMetaTile_immediate
+; A = metatile index
+; DE = YX metatile position
 updateMetatileAttributeCacheAndDrawImmediate:
-    push AF
+    ld B, A
     ld A, BANK(metatilesOutdoor)
     call pushBankNrAndSwitch
-    pop AF
+    ld A, B
     push AF
-    push DE
+
+    ; Load metatile attributes from new tile
     ld L, A
     ld H, $00
-    ld D, H
-    ld E, L
+    ld B, H
+    ld C, L
     add HL, HL
-    add HL, DE
+    add HL, BC
     add HL, HL
+    ld C, $04
+    add HL, BC
     ld A, [wTileDataTablePointer.High]
-    ld D, A
+    ld B, A
     ld A, [wTileDataTablePointer]
-    ld E, A
-    add HL, DE
-    ld DE, $04
-    add HL, DE
+    ld C, A
+    add HL, BC
     ld A, [HL+]
     ld B, [HL]
     ld C, A
-    pop DE
     push DE
-    push BC
+
+    ; Write the attributes into the correct location in the cache
+    ; Index into the wMetaTileAttributeCache with 2*(10*D+E)
     ld HL, wMetatileAttributeCache
-    ld   A, D
-    add  A, A
-    ld   C, A
-    add  A, A
-    add  A, A
-    add  A, C
-    add  A, E
-    ld   E, A
-    ld   D, $00
-    add  HL, DE
-    add  HL, DE
-    pop BC
-    ld [HL], C
-    inc HL
+    rl D
+    ld A, D
+    add A, A
+    add A, A
+    add A, D
+    add A, E
+    add A, A
+    ; At this point the max value in A is 2*(10*7+9)=158
+    ld E, A
+    ld D, $00
+    add HL, DE
+    ld A, C
+    ld [HL+], A
     ld [HL], B
+
     call popBankNrAndSwitch
     pop DE
     pop AF
     ld HL, wRoomTiles
     jp drawMetaTile_immediate
 
+; This function caches the metatile attributes for the
+; entire room before loading the tiles used in drawing.
+; It relies on wRoomTiles being properly populated before this
+; function is called. Otherwise there are no inputs or outputs.
 cacheMetatileAttributesAndLoadRoomTiles:
     ld A, BANK(metatilesOutdoor)
     call pushBankNrAndSwitch
+
+    ; Disable interrupts for stack pointer reuse
+    ; This may be unnecessary now, but is put here
+    ; as a precaution in case this function is interrupted
+    ; after other code changes.
+    di
     ld [wStackPointerBackupLow], SP
+
+    ; Start at the end of the arrays and work backwards
+    ; due to how push is implemented
     ld HL, wMetatileAttributeCache+160
     ld SP, HL
     ld DE, wRoomTiles+80
@@ -7160,11 +7184,14 @@ cacheMetatileAttributesAndLoadRoomTiles:
     ld B, [HL]
     ld C, A
 .loop:
+    ; Load metatile index
     dec DE
     ld A, [DE]
+
+    ; Locate the metatile attributes
     ld L, A
     ld H, $00
-    push BC
+    push BC ; backup within wMetatileAttributeCache
     ld C, L
     ld B, H
     add HL, HL
@@ -7172,20 +7199,27 @@ cacheMetatileAttributesAndLoadRoomTiles:
     add HL, HL
     ld C, $04
     add HL, BC
-    pop BC
+    pop BC ; restore from wMetatileAttributeCache
     add HL, BC
     ld A, [HL+]
     ld H, [HL]
     ld L, A
-    push HL
+    push HL ; write attributes to wMetatileAttributeCache
+
+    ; Break the loop when we reach the correct low byte of wRoomTiles
+    ; This works since the number of iterations is less than 256
     ld A, E
     cp A, LOW(wRoomTiles)
     jr NZ, .loop
+
+    ; Restore the stack pointer and enable interrupts 
     ld HL, wStackPointerBackupLow
     ld A, [HL+]
     ld H, [HL]
     ld L, A
     ld SP, HL
+    ei
+
     call popBankNrAndSwitch
     ld HL, wRoomTiles
     jp loadRoomTiles
@@ -7220,7 +7254,7 @@ callFunctionInBank0E:
 prepareNpcPlacementOptions_trampoline:
     jp_to_bank 0E, prepareNpcPlacementOptions
 
-ds 47 ; spare bytes, use as desired
+ds 48 ; spare bytes, use as desired
 
 CopyHL_to_DE_size_BC:
     ld   A, B                                          ;; 00:2b40 $78

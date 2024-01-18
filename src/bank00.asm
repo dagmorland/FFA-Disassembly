@@ -7176,8 +7176,7 @@ cacheMetatileAttributesAndLoadRoomTiles:
 
     ; Start at the end of the arrays and work backwards
     ; due to how push is implemented
-    ld HL, wMetatileAttributeCache+160
-    ld SP, HL
+    ld SP, wMetatileAttributeCache+160
     ld DE, wRoomTiles+80
     ld HL, wTileDataTablePointer
     ld A, [HL+]

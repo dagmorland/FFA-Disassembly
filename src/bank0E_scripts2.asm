@@ -6194,9 +6194,8 @@ prepareNpcPlacementOptions:
     ld [wStackPointerBackupLow], SP
 
     ; Load in the scratch location into the stack pointer for fast writes
-    ld HL, wSpawnPlacementScratch+331
     di
-    ld SP, HL
+    ld SP, wSpawnPlacementScratch+331
 
     ; Loop over position potentials and check for suitability
     ld B, $0c ; number of y positions to check
@@ -6214,9 +6213,19 @@ prepareNpcPlacementOptions:
     dec H
 .no_sub_carry:
 
-    ; Reset player proximity checks in y direction in D bit 0/1
-    ; Reset 'tile to the right is collisionless' flag in D bit 2/3
-    ld D, C ; C guaranteed to be 0 at this point
+    ; D is used for processing flags throughout the procedure.
+    ; The bit flags are described below
+    ; Bits 3/4 and 6/7 are intentionally duplicated for speed improvements
+    ;
+    ; bit 0: current metatile bottom half clear
+    ; bit 1: current metatile top half clear
+    ; bit 2: bottom position passed prox check
+    ; bit 3: top position passed prox check
+    ; bit 4: rightward metatile bottom half clear
+    ; bit 5: rightward metatile top half clear
+    ; bit 6: bottom position passed prox check
+    ; bit 7: top position passed prox check
+    ld D, C ; Reset flags. C guaranteed to be 0 at this point
 
     ; Load player y position into C
     ld A, [wSpawnPlacementScratch+1]
@@ -6290,7 +6299,7 @@ prepareNpcPlacementOptions:
     ; if only the top/bottom of a land tile is set, the center of the tile is blocked
     cp A, $03
     jr NC, .proximity_test
-    bit 5, E
+    bit 5, E ; signifies land tile
     jr Z, .proximity_test
     jr .prepare_for_right_column
 .proximity_test:

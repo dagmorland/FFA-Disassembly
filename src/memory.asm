@@ -1651,14 +1651,9 @@ hSoundEffectLoopCounterChannel1:
 hSoundEffectLoopCounterChannel4:
     ds 1                                               ;; ff9d
 
-; Used for a high byte in conjunction with the timer interrupt
-; See isrTimer in bank00 for details of use
-hTimerHigh:
-    ds 1
-
 ; Unused and ready for future features
 hUnused:
-    ds 91
+    ds 92
 
 ; These next three are used as values for signed math. BadBoy understands this, yet still adds them here.
 hUnusedFFFA:

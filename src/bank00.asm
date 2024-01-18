@@ -22,17 +22,9 @@ isrLCDC:
 
 SECTION "isrTimer", ROM0[$0050]
 
-; Increments a high byte in HRAM
-; Function is exactly 8 bytes, allowing it to remain in its
-; designated section without an additional call.
-; Per line comments are cycles/bytes
 isrTimer:
-    push AF ;4/1
-    ldh a, [hTimerHigh] ;3/2
-    inc a ;1/1
-    ldh [hTimerHigh], a ;3/2
-    pop AF ;3/1
-    reti ;4/1
+    call DummyInterruptHandler                         ;; 00:0050 $cd $87 $00
+    reti                                               ;; 00:0053 $d9
 
 SECTION "isrSerial", ROM0[$0058]
 
@@ -4266,64 +4258,6 @@ noCollision:
     cp   A, $01                                        ;; 00:190c $fe $01
     ret                                                ;; 00:190e $c9
 
-;; A = object collision flags
-;; D = y tile coordinate
-;; E = x tile coordinate
-;; HL = tile attributes
-;; Return: Z = collision
-;checkTileCollisionForSpawn:
-;    and  A, $07
-;    cp   A, $01
-;    jr   Z, .land
-;    cp   A, $03
-;    jr   Z, .air
-;    cp   A, $05
-;    jr   Z, .water
-;    cp   A, $00
-;    jr   Z, .collisionless
-;    xor  A, A
-;    ret
-;.collisionless:
-;    xor  A, A
-;    inc  A
-;    ret
-;.air:
-;    ld A, $04
-;    and A, H
-;    ret
-;.water:
-;    ld A, $c0
-;    and A, L
-;    ret Z
-;    ld A, $80
-;    and A, L
-;    jr Z, .water_check_below
-;    ld A, $40
-;    and A, L
-;    ret NZ
-;    inc D
-;    bit 0, D
-;    ret
-;.water_check_below:
-;    bit 0, D
-;    ret
-;.land:
-;    ld A, $30
-;    and A, L
-;    ret  Z
-;    ld A, $20
-;    and A, L
-;    jr Z, .land_check_below
-;    ld A, $10
-;    and A, L
-;    ret  NZ
-;    inc D
-;    bit 0, D
-;    ret
-;.land_check_below:
-;    bit  0, D
-;    ret
-
 ; A = object collision flags
 ; D = y tile coordinate
 ; E = x tile coordinate
@@ -7253,7 +7187,7 @@ callFunctionInBank0E:
 prepareNpcPlacementOptions_trampoline:
     jp_to_bank 0E, prepareNpcPlacementOptions
 
-ds 48 ; spare bytes, use as desired
+ds 48 ; Free space
 
 CopyHL_to_DE_size_BC:
     ld   A, B                                          ;; 00:2b40 $78

@@ -861,7 +861,7 @@ prepareNpcPlacementOptionsSetup:
     ld A, [HL]
     jp prepareNpcPlacementOptions_trampoline ;3
 
-ds 63 ; spare bytes, use as desired
+ds 63 ; Free space
 
 spawnNpcsFromTable:
     push HL                                            ;; 03:44ed $e5

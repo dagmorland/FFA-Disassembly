@@ -3880,8 +3880,8 @@ getRoomMetaTileAttributes:
 .y_pos_on_screen:
 
     ; Metatiles are on 16px boundaries vs the 8px position grid
-    srl D
-    srl E
+    srl  D                                             ;; 00:16d4 $cb $3a
+    srl  E                                             ;; 00:16d6 $cb $3b
 
     ; Read the attributes from the cache into HL
     call getMetatileAttributeCacheIndex

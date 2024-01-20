@@ -844,8 +844,9 @@ selectRandomNpcPlacement:
     ld E, A
     ret
 
-prepareNpcPlacementOptionsSetup:
-    ; Get object collision flag based on NPC type, put it in A
+; Load collision flags then jump to placement search algorithm
+prepareNpcPlacementOptions:
+    ; Get object collision flags based on NPC type, put it in A
     ld A, C
     ld L, A
     ld H, $00
@@ -859,7 +860,7 @@ prepareNpcPlacementOptionsSetup:
     ld DE, npcDataTable ; located in bank03
     add HL, DE
     ld A, [HL]
-    jp prepareNpcPlacementOptions_trampoline ;3
+    jp scanRoomForNpcPlacementOptions_trampoline
 
 ds 63 ; Free space
 
@@ -946,7 +947,7 @@ spawnNpcsFromTable:
     ret                                                ;; 03:454a $c9
 .random_location:
     push BC
-    call prepareNpcPlacementOptionsSetup
+    call prepareNpcPlacementOptions
     pop BC
 .random_loop:
     push BC

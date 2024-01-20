@@ -3850,55 +3850,68 @@ scriptOpWaitWhileMovement:
     db   $4f, $2a, $b9, $c8, $fe, $ff, $20, $f9        ;; 00:16a3 ????????
     db   $79, $fe, $ff, $c9                            ;; 00:16ab ????
 
+ds 7 ; Free space
+
 ; D = object y tile coordinate
 ; E = object x tile coordinate
 ; Return: HL = tile attributes
 getRoomMetaTileAttributes:
     ; Account for requests outside the current screen
     ; This can happen for projectiles in particular
-    ld   A, E
-    cp   A, $14
-    jr   C, .x_pos_on_screen
-    bit  7, E
-    jr   NZ, .tile_left_of_screen
-    ld   E, $13 ; use the right-most tile position
-    jr   .x_pos_on_screen
+    ld   A, E                                          ;; 00:16b6 $7b
+    cp   A, $14                                        ;; 00:16b7 $fe $14
+    jr   C, .x_pos_on_screen                           ;; 00:16b9 $38 $0a
+    bit  7, E                                          ;; 00:16bb $cb $7b
+    jr   NZ, .tile_left_of_screen                      ;; 00:16bd $20 $04
+    ld   E, $13 ; use the right-most tile position     ;; 00:16bf $1e $13
+    jr   .x_pos_on_screen                              ;; 00:16c1 $18 $02
 .tile_left_of_screen:
-    ld   E, $00 ; use the left-most tile position
+    ld   E, $00 ; use the left-most tile position      ;; 00:16c3 $1e $00
 .x_pos_on_screen:
-    ld   A, D
-    cp   A, $10
-    jr   C, .y_pos_on_screen
-    bit  7, D
-    jr   NZ, .tile_above_screen
-    ld   D, $0f ; use the bottom-most tile position
-    jr   .y_pos_on_screen
+    ld   A, D                                          ;; 00:16c5 $7a
+    cp   A, $10                                        ;; 00:16c6 $fe $10
+    jr   C, .y_pos_on_screen                           ;; 00:16c8 $38 $0a
+    bit  7, D                                          ;; 00:16ca $cb $7a
+    jr   NZ, .tile_above_screen                        ;; 00:16cc $20 $04
+    ld   D, $0f ; use the bottom-most tile position    ;; 00:16ce $16 $0f
+    jr   .y_pos_on_screen                              ;; 00:16d0 $18 $02
 .tile_above_screen:
-    ld   D, $00 ; use the top-most tile position
+    ld   D, $00 ; use the top-most tile position       ;; 00:16d2 $16 $00
 .y_pos_on_screen:
 
     ; Metatiles are on 16px boundaries vs the 8px position grid
-    res 0, D ; optimization for the indexing logic below
-    srl  E
+    srl D
+    srl E
 
+    ; Read the attributes from the cache into HL
+    call getMetatileAttributeCacheIndex
+    ld A, [HL+]
+    ld H, [HL]
+    ld L, A
+    ret
+
+; Input: DE (yx) metatile (16px grid) position
+; Output: HL pointer to first byte in metatile attributes
+;         D set to 0, A/E trashed
+;         BC unchanged
+getMetatileAttributeCacheIndex:
     ; Index into the wMetaTileAttributeCache with 2*(10*D+E)
     ld HL, wMetatileAttributeCache
+    sla D
     ld A, D
     add A, A
     add A, A
     add A, D
     add A, E
     add A, A
+
     ; At this point the max value in A is 2*(10*7+9)=158
     ld E, A
     ld D, $00
     add HL, DE
-    ld A, [HL+]
-    ld H, [HL]
-    ld L, A
     ret
 
-ds 30 ; Free space
+ds 17 ; Free space
 
 ; B = object direction bits. If bit 7 is set then the player will not take spike damage.
 ; C = object collision flags
@@ -7049,40 +7062,19 @@ updateMetatileAttributeCacheAndDrawImmediate:
     ld A, B
     push AF
 
-    ; Load metatile attributes from new tile
-    ld L, A
-    ld H, $00
-    ld B, H
-    ld C, L
-    add HL, HL
-    add HL, BC
-    add HL, HL
-    ld C, $04
-    add HL, BC
-    ld A, [wTileDataTablePointer.High]
-    ld B, A
-    ld A, [wTileDataTablePointer]
-    ld C, A
-    add HL, BC
+    ; Load metatile attributes from the new tile
+    push DE
+    call getTileInfoPointer
+    ld DE, $04
+    add HL, DE
     ld A, [HL+]
     ld B, [HL]
     ld C, A
-    push DE
+    pop DE
 
     ; Write the attributes into the correct location in the cache
-    ; Index into the wMetaTileAttributeCache with 2*(10*D+E)
-    ld HL, wMetatileAttributeCache
-    rl D
-    ld A, D
-    add A, A
-    add A, A
-    add A, D
-    add A, E
-    add A, A
-    ; At this point the max value in A is 2*(10*7+9)=158
-    ld E, A
-    ld D, $00
-    add HL, DE
+    push DE
+    call getMetatileAttributeCacheIndex
     ld A, C
     ld [HL+], A
     ld [HL], B
@@ -7111,37 +7103,41 @@ cacheMetatileAttributesAndLoadRoomTiles:
     ; Start at the end of the arrays and work backwards
     ; due to how push is implemented
     ld SP, wMetatileAttributeCache+160
-    ld DE, wRoomTiles+80
+    ld BC, wRoomTiles+80
     ld HL, wTileDataTablePointer
     ld A, [HL+]
-    ld B, [HL]
-    ld C, A
+    ld D, [HL]
+    ld E, A
 .loop:
     ; Load metatile index
-    dec DE
-    ld A, [DE]
+    dec BC
+    ld A, [BC]
 
     ; Locate the metatile attributes
+    ; getTileInfoPointer is too slow to be used in this function
     ld L, A
     ld H, $00
-    push BC ; backup within wMetatileAttributeCache
-    ld C, L
-    ld B, H
+    push DE ; backup within wMetatileAttributeCache
+    ld E, L
+    ld D, H
     add HL, HL
-    add HL, BC
+    add HL, DE
     add HL, HL
-    ld C, $04
-    add HL, BC
-    pop BC ; restore from wMetatileAttributeCache
-    add HL, BC
+    ld E, $04
+    add HL, DE
+    pop DE ; restore from wMetatileAttributeCache
+    add HL, DE
+
+    ; Read the metatile attributes
     ld A, [HL+]
     ld H, [HL]
     ld L, A
+
     push HL ; write attributes to wMetatileAttributeCache
 
     ; Break the loop when we reach the correct low byte of wRoomTiles
     ; This works since the number of iterations is less than 256
-    ld A, E
+    ld A, C
     cp A, LOW(wRoomTiles)
     jr NZ, .loop
 
@@ -7184,10 +7180,10 @@ callFunctionInBank0E:
     ld   A, [wScratchBankCallA]
     ret
 
-prepareNpcPlacementOptions_trampoline:
-    jp_to_bank 0E, prepareNpcPlacementOptions
+scanRoomForNpcPlacementOptions_trampoline:
+    jp_to_bank 0E, scanRoomForNpcPlacementOptions
 
-ds 48 ; Free space
+ds 72 ; Free space
 
 CopyHL_to_DE_size_BC:
     ld   A, B                                          ;; 00:2b40 $78

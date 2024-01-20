@@ -8,7 +8,7 @@ INCLUDE "include/constants.inc"
 SECTION "bank0e", ROMX[$4000], BANK[$0e]
 
 entryPointTableBank0E:
-    call_to_bank_target prepareNpcPlacementOptions
+    call_to_bank_target scanRoomForNpcPlacementOptions
 
 script_0294:
     sIF_TRIGGERED_ON_BY $c9                            ;; 0e:4000 $0b $c9 $00 $33
@@ -6160,9 +6160,9 @@ script_0549:
       db "<11>", $00 ;; 0e:7b28
     sEND                                               ;; 0e:7b3b $00
 
-; A = spawning NPC type
 ; Make a list of all possible NPC placement options in y=[02,0c] and x=[02,10]
-prepareNpcPlacementOptions:
+; Input A = spawning NPC collision flags
+scanRoomForNpcPlacementOptions:
 
     ; Save collision bit check information based on NPC spawn type into B
     ; This remapping is done to save time and space later

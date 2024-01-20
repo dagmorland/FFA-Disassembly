@@ -7120,9 +7120,9 @@ cacheMetatileAttributesAndLoadRoomTiles:
     add HL, HL
     add A, L
     ld L, A
-    jr NC, .continue
+    jr NC, .finish_index
     inc H
-.continue:
+.finish_index:
     add HL, HL
     add HL, DE
 

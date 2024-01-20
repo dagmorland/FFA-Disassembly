@@ -3892,23 +3892,24 @@ getRoomMetaTileAttributes:
 
 ; Input: DE (yx) metatile (16px grid) position
 ; Output: HL pointer to first byte in metatile attributes
-;         D set to 0, A/E trashed
-;         BC unchanged
+;         BC, DE unchanged, A=L, F varies
 getMetatileAttributeCacheIndex:
     ; Index into the wMetaTileAttributeCache with 2*(10*D+E)
     ld HL, wMetatileAttributeCache
-    sla D
     ld A, D
     add A, A
     add A, A
+    add A, A
+    add A, D
     add A, D
     add A, E
     add A, A
 
     ; At this point the max value in A is 2*(10*7+9)=158
-    ld E, A
-    ld D, $00
-    add HL, DE
+    add A, L
+    ld L, A
+    ret NC
+    inc H
     ret
 
 ds 17 ; Free space
@@ -7025,8 +7026,7 @@ getRandomInRange:
     ld E, A
     call getRandomByte
     ld D, A
-    call MultiplyDE_by_C_24bit
-    ret
+    ; Intentionally let fall into MultiplyDE_by_C_24bit
 
 ; Input DE and C
 ; Output:
@@ -7073,14 +7073,12 @@ updateMetatileAttributeCacheAndDrawImmediate:
     pop DE
 
     ; Write the attributes into the correct location in the cache
-    push DE
     call getMetatileAttributeCacheIndex
     ld A, C
     ld [HL+], A
     ld [HL], B
 
     call popBankNrAndSwitch
-    pop DE
     pop AF
     ld HL, wRoomTiles
     jp drawMetaTile_immediate
@@ -7115,17 +7113,17 @@ cacheMetatileAttributesAndLoadRoomTiles:
 
     ; Locate the metatile attributes
     ; getTileInfoPointer is too slow to be used in this function
+    ; Instead, pointer is solved by HL=2*(2*(A+1)+A)+DE=DE+6*A+4
     ld L, A
     ld H, $00
-    push DE ; backup within wMetatileAttributeCache
-    ld E, L
-    ld D, H
+    inc HL
     add HL, HL
-    add HL, DE
+    add A, L
+    ld L, A
+    jr NC, .continue
+    inc H
+.continue:
     add HL, HL
-    ld E, $04
-    add HL, DE
-    pop DE ; restore from wMetatileAttributeCache
     add HL, DE
 
     ; Read the metatile attributes

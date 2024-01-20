@@ -147,7 +147,7 @@ scriptOpCodeClearFastMovement:
     call getNextScriptInstruction                      ;; 00:0165 $cd $27 $37
     ret                                                ;; 00:0168 $c9
 
-getPlayerNearestTilePostion:
+getPlayerNearestTilePosition:
     ld   C, $04                                        ;; 00:0169 $0e $04
     call getObjectNearestTilePosition                  ;; 00:016b $cd $ef $05
     ret                                                ;; 00:016e $c9

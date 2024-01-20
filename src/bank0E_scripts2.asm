@@ -6160,52 +6160,62 @@ script_0549:
       db "<11>", $00 ;; 0e:7b28
     sEND                                               ;; 0e:7b3b $00
 
-; C = NPC type
-; Make a list of NPC placement options in the interval y [02,0c] and x [02,10]
+; A = spawning NPC type
+; Make a list of all possible NPC placement options in y=[02,0c] and x=[02,10]
 prepareNpcPlacementOptions:
 
-    ; Save collision information based on type in B
+    ; Save collision bit check information based on NPC spawn type into B
+    ; This remapping is done to save time and space later
     and A, $07
     cp A, $01
     jr Z, .land
     cp A, $05
     jr Z, .water
-    ld B, $00
+    ld B, $00 ; simply signifies not water or land
     jr .typing_done
 .water:
-    ld B, $80
+    ld B, $80 ; water top tile bit checked from LSB of metatile attributes
     jr .typing_done
 .land:
-    ld B, $20
+    ld B, $20 ; land top tile bit checked from LSB of metatile attributes
 .typing_done:
 
     ; Get player position in DE
-    ld C, $04
-    call getObjectNearestTilePosition
+    call getPlayerNearestTilePosition
 
-    ; Store the player Y position at the start of the scratch array for easy access
+    ; Store the player position at the start of the array for easy access
+    ; This may be overwritten by the last position placement option,
+    ; but if that happens this data will no longer be necessary.
     ld HL, wSpawnPlacementScratch+1
     ld A, D
     ld [HL+], A
     ld [HL], E
     ld E, B
 
-    ; Backup stack pointer, we will be using the stack operations to speed up function processing
+    ; Backup stack pointer, stack operations will be used to speed up processing
     ld [wStackPointerBackupLow], SP
 
-    ; Load in the scratch location into the stack pointer for fast writes
+    ; Disable interrupts and load in the scratch location
+    ; into the stack pointer for fast writes.
+    ; Start the stack pointer at the end of the buffer.
     di
     ld SP, wSpawnPlacementScratch+331
 
-    ; Loop over position potentials and check for suitability
-    ld B, $0c ; number of y positions to check
-
-    ; C should be 0 to start to speed up loop instructions
-    ld C, $00
+    ; Load pointer to appropriate starting point in metatile attribute cache.
+    ; There are 8x10 (rows by columns) metatiles on screen, but only the inner
+    ; 6x8 are considered for potential spawn locations. The start of each
+    ; outer loop iteration will subtract 4 from HL, so set the array to:
+    ; 2 bytes per metatile * (6 rows * 10 columns + 8 columns) + 1 for MSB + 4
     ld HL, wMetatileAttributeCache+141
-.loop_outer:
 
-    ; reduce metatile attr pointer by 4
+    ; B = starting row to check (1 metatile up from the bottom)
+    ; C = 0 to speed up assumptions in loop instructions
+    ld BC, $0c00
+
+.loop_outer:
+    ; Loop over each relevant metatile row.
+
+    ; Reduce metatile attr pointer by 4 to move to the next row above
     ld A, L
     sub A, $04
     ld L, A
@@ -6219,12 +6229,12 @@ prepareNpcPlacementOptions:
     ;
     ; bit 0: current metatile bottom half clear
     ; bit 1: current metatile top half clear
-    ; bit 2: bottom position passed prox check
-    ; bit 3: top position passed prox check
+    ; bit 2: bottom position passed y prox check
+    ; bit 3: top position passed y prox check
     ; bit 4: rightward metatile bottom half clear
     ; bit 5: rightward metatile top half clear
-    ; bit 6: bottom position passed prox check
-    ; bit 7: top position passed prox check
+    ; bit 6: bottom position passed y prox check
+    ; bit 7: top position passed y prox check
     ld D, C ; Reset flags. C guaranteed to be 0 at this point
 
     ; Load player y position into C
@@ -6234,61 +6244,75 @@ prepareNpcPlacementOptions:
     ; Do proximity checks in y direction
 .start_y_prox_check:
     ld A, C
-    sub A, B
-    bit 7, A
-    jr Z, .tile_above_player
-    cpl
+    sub A, B ; subtract candidate placement y position from player y position
+    bit 7, A ; check for carry or if player position was FF (8px off top edge)
+    jr Z, .verify_y_distance
+    cpl ; complement then increment to turn a negative number positive
     inc  A
-.tile_above_player:
+.verify_y_distance:
     cp A, $04
-    bit 0, B
-    jr Z, .check_and_loop
-    jr C, .y_prox_check_complete
-    set 3, D
+    bit 0, B ; currently considering a placement at the top of the tile? 
+    jr Z, .check_above ; this is the bottom of the tile, branch logic
+    jr C, .y_prox_check_complete ; too close, end the proximity check
+    set 3, D ; top placement position is sufficiently distant from the player
     jr .y_prox_check_complete
-.check_and_loop:
-    dec B
-    jr C, .start_y_prox_check
-    set 2, D
-    jr .start_y_prox_check
-    
+.check_above:
+    dec B ; check one position placement position higher next
+    jr C, .start_y_prox_check ; too close, loop the proximity check
+    set 2, D ; bottom placement position is sufficiently distant from the player
+    jr .start_y_prox_check ; restart loop
 .y_prox_check_complete:
-    inc B
+    inc B ; reset B from the y proximity check
+
+    ; Set both top and bottom nibble to have the same y proximity flags
     ld A, D
-    swap A ; both top and bottom nibble should have same proximity flags
+    swap A
     add A, D
     ld D, A
 
-    ld C, $10 ; starting x position on the right
+    ld C, $10 ; starting x metatile position on the right
+
 .loop_inner:
-    ld A, E
+    ; Loop over each relevant metatile in the current row.
+    ; For each metatile, we analyze its collision flags then check
+    ; 4 potential placement positions in the following order:
+    ; -- bottom left (spawn sprite is centered on the metatile)
+    ; -- top left (spawn sprite is 8px offset up from the metatile)
+    ; -- bottom right (spawn sprite is 8px offset right from the metatile)
+    ; -- top right (spawn sprite is 8px offset up & right from the metatile)
+
+    ; Analyze the metatile collision flags and set algorithm flags accordingly
+    ; - Land:  The metatile bottom/top halves are separately considered, but if
+    ;          either is blocked, then spawns cannot be horizontally centered
+    ; - Water: The metatile bottom/top halves are separately considered
+    ; - Air:   The whole metatile is either clear or blocked
+    ld A, E ; Load tile type
     and A, A
     jr Z, .air_collision_check
     rrca
     add A, E
     dec HL
-    and A, [HL]
-    jr Z, .finish_collision_check
+    and A, [HL] ; check top or bottom clear
+    jr Z, .finish_collision_check ; if not, continue
     ld A, E
-    and A, [HL]
-    jr Z, .bottom_half_open
-    set 1, D ; top half open
+    and A, [HL] ; check if top is clear
+    jr Z, .bottom_half_open ; if not, bottom must be clear
+    set 1, D ; top half clear
     rrca
-    and A, [HL]
+    and A, [HL] ; check if bottom is clear
     jr Z, .finish_collision_check
 .bottom_half_open:
-    inc D ; faster than set 0, D
+    inc D ; bottom half clear, faster than set 0, D
     jr .finish_collision_check
 .air_collision_check:
-    ld A, $04
-    and A, [HL]
-    dec HL
+    ld A, [HL-]
+    and A, $04 ; check if metatile is clear for air units
     jr Z, .finish_collision_check
-    set 1, D
-    inc D
-
+    set 1, D ; top half clear
+    inc D ; bottom half clear, faster than set 0, D
 .finish_collision_check:
-    dec HL
+    dec HL ; move metatile attr pointer down for next loop iteration
+
     ; Passed the collision test, now check for proximity to player.
     ; NPC cannot be placed within 4 tile positions of the player.
     ; Given sprites are 2 tiles wide, this translate to requiring
@@ -6296,73 +6320,87 @@ prepareNpcPlacementOptions:
     ld A, D
     and A, $03
     jr Z, .positions_blocked ; all metatile positions blocked
-    ; if only the top/bottom of a land tile is set, the center of the tile is blocked
+
+    ; Check if only the top/bottom of a land tile is set
+    ; If so, the center of the tile is blocked
     cp A, $03
-    jr NC, .proximity_test
+    jr NC, .proximity_test ; both top/bottom are open, proceed as normal
     bit 5, E ; signifies land tile
-    jr Z, .proximity_test
-    jr .prepare_for_right_column
+    jr Z, .proximity_test ; not a land tile, proceed as normal
+    jr .prepare_for_right_column ; skip to the right x position
 .proximity_test:
-    bit 0, D
-    jr Z, .check_next
-    bit 2, D
-    jr NZ, .far_enough_away
-    ld A, [wSpawnPlacementScratch+2]
-    sub A, C
-    bit 7, A
-    jr Z, .tile_left_of_player
-    cpl
+    bit 0, D ; is the section of tile collision free?
+    jr Z, .check_next ; if not, go to the next position
+    bit 2, D ; is this position already over a metatile away in the y direction?
+    jr NZ, .write_spawn_placement_option ; yes, shortcut checking x-direction
+    ld A, [wSpawnPlacementScratch+2] ; load player x position
+    sub A, C ; subtract candidate placement x position from player x position
+    bit 7, A ; check for carry or if player position was FF (8px off left edge)
+    jr Z, .verify_x_distance ; if so, skip ahead
+    cpl ; complement then increment to turn a negative number positive
     inc  A
-.tile_left_of_player:
+.verify_x_distance:
     cp A, $04
-    jr C, .check_next
-.far_enough_away:
-    push BC
+    jr C, .check_next ; too close, try next position
+.write_spawn_placement_option:
+    push BC ; all tests passed, use the SP to write to wSpawnPlacementScratch
 .check_next:
-    bit 0, B
-    jr NZ, .continue_x
-    dec B
-    rrc D
+    bit 0, B ; currently considering a placement at the top of the tile?
+    jr NZ, .continue_x ; if so, see if we can move right next
+    dec B ; otherwise move to considering top of tile
+    rrc D ; roll flags to the right to consider the top section in the loop
     ld A, B
-    dec A ; skip y position 1 by design
-    jr Z, .continue_x
-    jr .proximity_test
+    dec A
+    jr Z, .continue_x ; if this is y position 1, skip it by original design
+    jr .proximity_test ; start over at new y position
 .continue_x:
-    bit 0, C
-    jr NZ, .complete_check
+    bit 0, C ; currently considering a placement on the right side of the tile?
+    jr NZ, .complete_check ; if so, we're already done
+    ; Otherwise, roll back B and D to their original state
     inc B
     rlc D
 .prepare_for_right_column:
-    inc C
+    inc C ; move to the right side of the tile
     ld A, D
-    swap D ; swapped D persists to next column
+    swap D ; now swap D flag nibbles
     or A, $f0
-    and A, D
+    and A, D ; and the two metatiles' collision results
+    ; This code also moves this inner_loop's collision results into the upper
+    ; nibble for the next iteration of inner_loop to use
     ld D, A
-    jr .proximity_test
+    jr .proximity_test ; start over at new x position
 .complete_check:
+    ; Roll back B, C, and D to original positions
     inc B
     dec C
     rlc D
     jr .finish_proximity_check
 .positions_blocked:
+    ; In this case, just ensure collision results are stored in the
+    ; upper nibble of D for the next iteration of inner_loop
     swap D
 .finish_proximity_check:
 
+    ; Reset current metatile collision flags for next loop iteration
     res 0, D
     res 1, D
 
+    ; Move left by two (since we consider spawn positions in quads)
     dec C
     dec C
     jr NZ, .loop_inner
+
+    ; Move up by two (since we consider spawn positions in quads)
     dec B
     dec B
     jp NZ, .loop_outer
 
+    ; Store ending stack pointer into DE
     ld HL, SP+0
     ld D, H
     ld E, L
 
+    ; Restore stack pointer and reenable interrupts
     ld HL, wStackPointerBackupLow
     ld A, [HL+]
     ld H, [HL]
@@ -6370,12 +6408,15 @@ prepareNpcPlacementOptions:
     ld SP, HL
     ei
 
+    ; Determine number of bytes written via SP
     ld HL, wSpawnPlacementScratch+331
     call sub_HL_DE
+
+    ; Divide by two, this is the number of possible positions (max 165)
     ld A, L
     rr H
     rra
-    ld [wSpawnPlacementScratch], A
+    ld [wSpawnPlacementScratch], A ; store result in first byte of buffer
 
     ret
 

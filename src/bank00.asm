@@ -7181,7 +7181,7 @@ callFunctionInBank0E:
 scanRoomForNpcPlacementOptions_trampoline:
     jp_to_bank 0E, scanRoomForNpcPlacementOptions
 
-ds 72 ; Free space
+ds 80 ; Free space
 
 CopyHL_to_DE_size_BC:
     ld   A, B                                          ;; 00:2b40 $78

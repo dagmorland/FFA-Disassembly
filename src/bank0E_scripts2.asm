@@ -6286,6 +6286,7 @@ scanRoomForNpcPlacementOptions:
     jr Z, .check_bottom ; if not, skip to the bottom
     set 1, D ; top half clear
 .check_bottom:
+    ld A, E
     rrca
     and A, [HL] ; check if bottom is clear
     jr Z, .finish_collision_check

@@ -7059,7 +7059,7 @@ updateMetatileAttributeCacheAndDrawImmediate:
     ld B, A
     ld A, BANK(metatilesOutdoor)
     call pushBankNrAndSwitch
-    ld A, B
+    ld A, B ; need A restored for getTileInfoPointer
     push AF
 
     ; Load metatile attributes from the new tile

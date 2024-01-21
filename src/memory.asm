@@ -1651,9 +1651,14 @@ hSoundEffectLoopCounterChannel1:
 hSoundEffectLoopCounterChannel4:
     ds 1                                               ;; ff9d
 
+; Scratch space, up to programmer to ensure use collisions
+; Current uses: scanRoomForNpcPlacementOptions
+hScratch:
+    ds 2
+
 ; Unused and ready for future features
 hUnused:
-    ds 92
+    ds 90
 
 ; These next three are used as values for signed math. BadBoy understands this, yet still adds them here.
 hUnusedFFFA:

@@ -6183,10 +6183,10 @@ scanRoomForNpcPlacementOptions:
     ; Get player position in DE
     call getPlayerNearestTilePosition
 
-    ; Store the player position at the start of the array for easy access
+    ; Store the player position in HRAM scratch space for easy access
     ; This may be overwritten by the last position placement option,
     ; but if that happens this data will no longer be necessary.
-    ld HL, wSpawnPlacementScratch+1
+    ld HL, hScratch
     ld A, D
     ld [HL+], A
     ld [HL], E
@@ -6229,7 +6229,7 @@ scanRoomForNpcPlacementOptions:
     ld D, C ; Reset flags. C guaranteed to be 0 at this point
 
     ; Load player y position into C
-    ld A, [wSpawnPlacementScratch+1]
+    ldh A, [hScratch]
     ld C, A
 
     ; Do proximity checks in y direction
@@ -6280,7 +6280,14 @@ scanRoomForNpcPlacementOptions:
     ; - Air:   The whole metatile is either clear or blocked
     ld A, E ; Load tile type
     and A, A
-    jr Z, .air_collision_check
+    jr NZ, .land_water_collision_check
+    ld A, [HL-] ; air metatiles check the upper byte of the attributes
+    and A, $04 ; check if metatile is clear for air units
+    jr Z, .finish_collision_check
+    set 1, D ; top half clear
+    inc D ; bottom half clear, faster than set 0, D
+    jr .finish_collision_check
+.land_water_collision_check:
     dec HL ; land/water metatiles check the lower byte of the attributes
     and A, [HL] ; check if top is clear
     jr Z, .check_bottom ; if not, skip to the bottom
@@ -6290,13 +6297,6 @@ scanRoomForNpcPlacementOptions:
     rrca
     and A, [HL] ; check if bottom is clear
     jr Z, .finish_collision_check
-    inc D ; bottom half clear, faster than set 0, D
-    jr .finish_collision_check
-.air_collision_check:
-    ld A, [HL-] ; air metatiles check the upper byte of the attributes
-    and A, $04 ; check if metatile is clear for air units
-    jr Z, .finish_collision_check
-    set 1, D ; top half clear
     inc D ; bottom half clear, faster than set 0, D
 .finish_collision_check:
     dec HL ; move metatile attr pointer down for next loop iteration
@@ -6320,7 +6320,7 @@ scanRoomForNpcPlacementOptions:
     jr Z, .check_next ; if not, go to the next position
     bit 2, D ; is this position already over a metatile away in the y direction?
     jr NZ, .write_spawn_placement_option ; yes, shortcut checking x-direction
-    ld A, [wSpawnPlacementScratch+2] ; load player x position
+    ldh A, [hScratch+1] ; load player x position
     sub A, C ; subtract candidate placement x position from player x position
     bit 7, A ; check for carry or if player position was FF (8px off left edge)
     jr Z, .verify_x_distance ; if so, skip ahead

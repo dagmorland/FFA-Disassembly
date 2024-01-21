@@ -6203,10 +6203,9 @@ scanRoomForNpcPlacementOptions:
 
     ; Load pointer to appropriate starting point in metatile attribute cache.
     ; There are 8x10 (rows by columns) metatiles on screen, but only the inner
-    ; 6x8 are considered for potential spawn locations. The start of each
-    ; outer loop iteration will subtract 4 from HL, so set the array to:
-    ; 2 bytes per metatile * (6 rows * 10 columns + 8 columns) + 1 for MSB + 4
-    ld HL, wMetatileAttributeCache+141
+    ; 6x8 are considered for potential spawn locations. So set the array to:
+    ; 2 bytes per metatile * (6 rows * 10 columns + 8 columns) + 1 for MSB = 137
+    ld HL, wMetatileAttributeCache+137
 
     ; B = starting row to check (1 metatile up from the bottom)
     ; C = 0 to speed up assumptions in loop instructions
@@ -6214,14 +6213,6 @@ scanRoomForNpcPlacementOptions:
 
 .loop_outer:
     ; Loop over each relevant metatile row.
-
-    ; Reduce metatile attr pointer by 4 to move to the next row above
-    ld A, L
-    sub A, $04
-    ld L, A
-    jr NC, .no_sub_carry
-    dec H
-.no_sub_carry:
 
     ; D is used for processing flags throughout the procedure.
     ; The bit flags are described below
@@ -6252,6 +6243,7 @@ scanRoomForNpcPlacementOptions:
 .verify_y_distance:
     cp A, $04
     bit 0, B ; currently considering a placement at the top of the tile? 
+    ; NOTE: bit command does not affect the carry flag from the previous cp
     jr Z, .check_above ; this is the bottom of the tile, branch logic
     jr C, .y_prox_check_complete ; too close, end the proximity check
     set 3, D ; top placement position is sufficiently distant from the player
@@ -6267,7 +6259,7 @@ scanRoomForNpcPlacementOptions:
     ; Set both top and bottom nibble to have the same y proximity flags
     ld A, D
     swap A
-    add A, D
+    or A, D
     ld D, A
 
     ld C, $10 ; starting x metatile position on the right
@@ -6289,23 +6281,18 @@ scanRoomForNpcPlacementOptions:
     ld A, E ; Load tile type
     and A, A
     jr Z, .air_collision_check
-    rrca
-    add A, E
-    dec HL
-    and A, [HL] ; check top or bottom clear
-    jr Z, .finish_collision_check ; if not, continue
-    ld A, E
+    dec HL ; land/water metatiles check the lower byte of the attributes
     and A, [HL] ; check if top is clear
-    jr Z, .bottom_half_open ; if not, bottom must be clear
+    jr Z, .check_bottom ; if not, skip to the bottom
     set 1, D ; top half clear
+.check_bottom:
     rrca
     and A, [HL] ; check if bottom is clear
     jr Z, .finish_collision_check
-.bottom_half_open:
     inc D ; bottom half clear, faster than set 0, D
     jr .finish_collision_check
 .air_collision_check:
-    ld A, [HL-]
+    ld A, [HL-] ; air metatiles check the upper byte of the attributes
     and A, $04 ; check if metatile is clear for air units
     jr Z, .finish_collision_check
     set 1, D ; top half clear
@@ -6326,8 +6313,7 @@ scanRoomForNpcPlacementOptions:
     cp A, $03
     jr NC, .proximity_test ; both top/bottom are open, proceed as normal
     bit 5, E ; signifies land tile
-    jr Z, .proximity_test ; not a land tile, proceed as normal
-    jr .prepare_for_right_column ; skip to the right x position
+    jr NZ, .prepare_for_right_column ; land tile, skip to the right x position
 .proximity_test:
     bit 0, D ; is the section of tile collision free?
     jr Z, .check_next ; if not, go to the next position
@@ -6393,7 +6379,17 @@ scanRoomForNpcPlacementOptions:
     ; Move up by two (since we consider spawn positions in quads)
     dec B
     dec B
-    jp NZ, .loop_outer
+    jr Z, .all_done
+
+    ; Reduce metatile attr pointer by 4 to move to the next row above
+    ld A, L
+    sub A, $04
+    ld L, A
+    jp NC, .loop_outer
+    dec H
+    jp .loop_outer
+
+.all_done:
 
     ; Store ending stack pointer into DE
     ld HL, SP+0

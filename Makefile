@@ -11,6 +11,10 @@ check: $(ROM)
 clean:
 	-rm -rf .bin .obj .dep .gfx
 
+DEBUG = -DDEBUG
+
+DEFS = $(DEBUG)
+
 $(ROM): $(patsubst src/%.asm,.obj/%.o,$(SRCS))
 	@mkdir -p $(@D)
 	rgblink -w -m $(basename $@).map -n $(basename $@).sym -o $@ $^
@@ -19,7 +23,7 @@ $(ROM): $(patsubst src/%.asm,.obj/%.o,$(SRCS))
 
 .obj/%.o $(DEPDIR)/%.mk: src/%.asm $(patsubst gfx/%.png,.gfx/%.bin,$(GFXS))
 	@mkdir -p $(dir .obj/$* .dep/$*)
-	rgbasm -Wall -Wextra --export-all -isrc -i.gfx -M .dep/$*.mk -MP -MQ .obj/$*.o -MQ .dep/$*.mk -o .obj/$*.o $<
+	rgbasm $(DEFS) -Wall -Wextra --export-all -isrc -i.gfx -M .dep/$*.mk -MP -MQ .obj/$*.o -MQ .dep/$*.mk -o .obj/$*.o $<
 
 .gfx/%.bin: gfx/%.png
 	@mkdir -p $(dir .gfx/$*)

@@ -20,8 +20,8 @@ FF_OR_MANA = -DMANA
 #FF_OR_MANA = -DFINAL_FANTASY
 
 # Controls whether to use the original spawn placement routine or the new bounded one
-#SPAWN = -DSPAWN_ORIGINAL
-SPAWN = -DSPAWN_NEW
+SPAWN = -DSPAWN_ORIGINAL
+#SPAWN = -DSPAWN_NEW
 
 # Controls whether to use the original random number generator or a linear congruential generator.
 #RNG = -DRNG_ORIGINAL

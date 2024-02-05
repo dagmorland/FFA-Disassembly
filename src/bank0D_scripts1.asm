@@ -684,11 +684,16 @@ script_0066:
     sEND                                               ;; 0d:4481 $00
 
 script_0067:
-    sIF_FLAG !wScriptFlags.7                           ;; 0d:4482 $08 $87 $00 $06
-      sSET_NPC_TYPES 18                                ;; 0d:4486 $fc $12
-      sSPAWN_NPC 1                                     ;; 0d:4488 $fd $01
-      sSPAWN_NPC 2                                     ;; 0d:448a $fd $02
-    sENDIF                                             ;; 0d:448c
+    ;sLOOP 255, 1
+    ;sLOOP 255, 1
+        sIF_FLAG !wScriptFlags.7                           ;; 0d:4482 $08 $87 $00 $06
+          sSET_NPC_TYPES 18                                ;; 0d:4486 $fc $12
+          sSPAWN_NPC 1                                     ;; 0d:4488 $fd $01
+          sSPAWN_NPC 2                                     ;; 0d:448a $fd $02
+          ;sDEL_NPC_1
+          ;sDEL_NPC_2
+          ;sDEL_NPC_3
+        sENDIF                                             ;; 0d:448c
     sEND                                               ;; 0d:448c $00
 
 script_0068:

@@ -4,6 +4,7 @@ INCLUDE "include/hardware.inc"
 INCLUDE "include/macros.inc"
 INCLUDE "include/charmaps.inc"
 INCLUDE "include/constants.inc"
+INCLUDE "include/debug.inc"
 
 SECTION "bank03", ROMX[$4000], BANK[$03]
 
@@ -674,8 +675,6 @@ destroyNPC:
     ld   B, $17                                        ;; 03:43af $06 $17
     call fillMemory                                    ;; 03:43b1 $cd $5d $2b
     ret                                                ;; 03:43b4 $c9
-    db   $21, $e0, $c4, $06, $0d, $11, $18, $00        ;; 03:43b5 ????????
-    db   $3e, $ff, $77, $19, $05, $20, $fb, $c9        ;; 03:43bd ????????
 
 giveFollower:
     ld   C, A                                          ;; 03:43c5 $4f
@@ -690,7 +689,6 @@ giveFollower:
     call spawnNPC                                      ;; 03:43d8 $cd $bd $42
     ret                                                ;; 03:43db $c9
 
-ds 4 ; Free space
 
 npcLoadTiles:
     ld   L, A                                          ;; 03:43dc $6f
@@ -912,6 +910,7 @@ getRandomTile:
     ret                                                ;; 03:44ec $c9
 
 spawnNpcsFromTable:
+    DBG_MSG_LABEL startSpawnMsg
     push HL                                            ;; 03:44ed $e5
     push AF                                            ;; 03:44ee $f5
     add  A, A                                          ;; 03:44ef $87
@@ -986,13 +985,25 @@ spawnNpcsFromTable:
     pop  HL                                            ;; 03:4549 $e1
     ret                                                ;; 03:454a $c9
 .random_location:
+    ld HL, $00
+.random_loop:
+    inc HL
+    push HL
     call getRandomTile                                 ;; 03:454b $cd $cd $44
     call checkNpcPotentialPlacement                    ;; 03:454e $cd $88 $44
-    jr   Z, .random_location                           ;; 03:4551 $28 $f8
+    pop HL
+    jr   Z, .random_loop                           ;; 03:4551 $28 $f8
+    ld A, L
+    ldh [hScratch], A
+    ld A, H
+    ldh [hScratch+1], A
     push BC                                            ;; 03:4553 $c5
+    push DE
     call spawnNPC                                      ;; 03:4554 $cd $bd $42
+    pop DE
     pop  BC                                            ;; 03:4557 $c1
     dec  B                                             ;; 03:4558 $05
+    DBG_MSG_LABEL endSpawnMsg2
     jr   NZ, .random_location                          ;; 03:4559 $20 $f0
     pop  HL                                            ;; 03:455b $e1
     ret                                                ;; 03:455c $c9
@@ -1044,7 +1055,7 @@ prepareNpcPlacementOptions:
     ld A, [HL]
     jp scanRoomForNpcPlacementOptions_trampoline
 
-ds 39 ; Free space
+ds 4 ; Free space
 
 ; Moved here to make room for an added NPC.
 tileorderNpc:
@@ -1053,6 +1064,7 @@ tileorderNpc:
     db   $10, $12, $11, $13, $14, $16, $15, $17
 
 spawnNpcsFromTable:
+    DBG_MSG_LABEL startSpawnMsg
     push HL                                            ;; 03:44ed $e5
     push AF                                            ;; 03:44ee $f5
     add  A, A                                          ;; 03:44ef $87
@@ -1136,14 +1148,18 @@ spawnNpcsFromTable:
     push BC
     call prepareNpcPlacementOptions
     pop BC
+    DBG_MSG_LABEL midSpawnMsg
 .random_loop:
     push BC
     call selectRandomNpcPlacement
     pop BC
     push BC                                            ;; 03:4553 $c5
+    push DE
     call spawnNPC                                      ;; 03:4554 $cd $bd $42
+    pop DE
     pop  BC                                            ;; 03:4557 $c1
     dec  B                                             ;; 03:4558 $05
+    DBG_MSG_LABEL endSpawnMsg
     jr   NZ, .random_loop                              ;; 03:4559 $20 $f0
     pop  HL                                            ;; 03:455b $e1
     ret                                                ;; 03:455c $c9
@@ -1702,7 +1718,6 @@ processNpcDeath:
     call destroyNPC                                    ;; 03:48b8 $cd $5f $43
     ret                                                ;; 03:48bb $c9
 
-ds 2 ; Free space
 
 ; HL = A + ((A * RND()) >> 11)
 ; Add 12.5% randomness to A and store in HL
@@ -4047,7 +4062,6 @@ call_03_5499:
     xor  A, A                                          ;; 03:5533 $af
     ret                                                ;; 03:5534 $c9
 
-ds 2 ; Free space
 
 call_03_5535:
     push DE                                            ;; 03:5535 $d5
@@ -4306,29 +4320,34 @@ INCLUDE "data/npc/metasprites.asm"
 ; game uses the even/odd nature of the timer to govern animations.
 delayWithMovingHold:
     dec  A
-    push AF
-    push DE
-    ld   A, [DE]
-    ld   C, A
-    push BC
-    call getObjectDirection
-    pop  BC
-    push AF
-    and  A, $0f
-    call processPhysicsForObject
-    pop  BC
-    pop  DE
-    pop  AF
-    bit  0, A
-    jr   Z, .check_if_moving
-    push AF
-    ld   A, $01
-    call npcSetMeleeState
-    pop  AF
-    ret
-.check_if_moving:
-    bit  4, B
-    ret  Z
-    inc  A
-    inc  A
-    ret
+;    push AF
+;    push DE
+;    ld   A, [DE]
+;    ld   C, A
+;    push BC
+;    call getObjectDirection
+;    pop  BC
+;    push AF
+;    and  A, $0f
+;    call processPhysicsForObject
+;    pop  BC
+;    pop  DE
+;    pop  AF
+;    bit  0, A
+;    jr   Z, .check_if_moving
+;    push AF
+;    ld   A, $01
+;    call npcSetMeleeState
+;    pop  AF
+;    ret
+;.check_if_moving:
+;    bit  4, B
+;    ret  Z
+;    inc  A
+;    inc  A
+;    ret
+; Moved here to make room for an added NPC.
+tileorderNpc:
+    db   $00, $02, $01, $03, $04, $06, $05, $07
+    db   $08, $0a, $09, $0b, $0c, $0e, $0d, $0f
+    db   $10, $12, $11, $13, $14, $16, $15, $17

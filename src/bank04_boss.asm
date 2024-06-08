@@ -1235,7 +1235,7 @@ bossSpellDamage:
     xor  A, A                                          ;; 04:46f4 $af
     ret                                                ;; 04:46f5 $c9
 
-; HL = DE + ((HL * RND()) >> 10)
+; HL = HL + ((DE * RND()) >> 10)
 ; Add 25% HL randomness to DE and store in HL
 add25rndHLtoDE_4:
     push HL                                            ;; 04:46f6 $e5

@@ -3025,7 +3025,8 @@ attackObjectFunction02:
     ld   C, A                                          ;; 01:54b0 $4f
     call playerAttackObjectInit                        ;; 01:54b1 $cd $d0 $59
     ld   A, [wSelectedObjectID]                        ;; 01:54b4 $fa $5a $cf
-    dec  A                                             ;; 01:54b7 $3d
+    ;dec  A                                             ;; 01:54b7 $3d
+    nop
     dec  A                                             ;; 01:54b8 $3d
     ld   C, A                                          ;; 01:54b9 $4f
     push BC                                            ;; 01:54ba $c5
@@ -4924,7 +4925,7 @@ data_01_60c1:
 ; 26: special north
 ; 28: special south
 attackSwordFrame1:
-    db   $04, $48, $02, $05, $0a, $00                  ;; 01:60ff .....?
+    db   $04, $48, $02, $06, $0a, $00                  ;; 01:60ff .....?
     dw   gfxAttackSword, data_01_68df                  ;; 01:6105 ....
     dw   data_01_69a1, data_01_69b0, data_01_69bf, data_01_69ce ;; 01:6109 .P.P.P.P
     dw   data_01_69dd, data_01_69f0, data_01_6a03, data_01_6a16 ;; 01:6111 .P.P.P.P

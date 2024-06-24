@@ -3025,8 +3025,7 @@ attackObjectFunction02:
     ld   C, A                                          ;; 01:54b0 $4f
     call playerAttackObjectInit                        ;; 01:54b1 $cd $d0 $59
     ld   A, [wSelectedObjectID]                        ;; 01:54b4 $fa $5a $cf
-    ;dec  A                                             ;; 01:54b7 $3d
-    nop
+    dec  A                                             ;; 01:54b7 $3d
     dec  A                                             ;; 01:54b8 $3d
     ld   C, A                                          ;; 01:54b9 $4f
     push BC                                            ;; 01:54ba $c5
@@ -4925,7 +4924,7 @@ data_01_60c1:
 ; 26: special north
 ; 28: special south
 attackSwordFrame1:
-    db   $04, $48, $02, $06, $0a, $00                  ;; 01:60ff .....?
+    db   $04, $48, $02, $05, $0a, $00                  ;; 01:60ff .....?
     dw   gfxAttackSword, data_01_68df                  ;; 01:6105 ....
     dw   data_01_69a1, data_01_69b0, data_01_69bf, data_01_69ce ;; 01:6109 .P.P.P.P
     dw   data_01_69dd, data_01_69f0, data_01_6a03, data_01_6a16 ;; 01:6111 .P.P.P.P
@@ -5253,7 +5252,7 @@ data_01_678f:
     dw   data_01_6ce4, data_01_6d13, data_01_6d42, data_01_6d71 ;; 01:67b1 ????????
 
 attackSpearFrame1:
-    db   $04, $48, $02, $06, $09, $00                  ;; 01:67b9 ??????
+    db   $04, $48, $02, $05, $09, $00                  ;; 01:67b9 ??????
     dw   data_08_7360, data_01_696f                    ;; 01:67bf ????
     dw   data_01_6e5c, data_01_6e7b, data_01_6e9a, data_01_6eb9 ;; 01:67c3 ????????
     dw   data_01_6e5c, data_01_6e7b, data_01_6e9a, data_01_6eb9 ;; 01:67cb ????????
@@ -5261,7 +5260,7 @@ attackSpearFrame1:
     dw   data_01_6ed8, data_01_6ee7, data_01_6ef6, data_01_6f05 ;; 01:67db ????????
 
 data_01_67e3:
-    db   $04, $40, $03, $05, $ff, $00                  ;; 01:67e3 ??????
+    db   $04, $40, $03, $03, $ff, $00                  ;; 01:67e3 ??????
     dw   data_08_7360, data_01_6993                    ;; 01:67e9 ????
     dw   data_01_69a1, data_01_69b0, data_01_69bf, data_01_69ce ;; 01:67ed ????????
     dw   data_01_69a1, data_01_69b0, data_01_69bf, data_01_69ce ;; 01:67f5 ????????

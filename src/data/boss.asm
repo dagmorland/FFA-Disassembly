@@ -17,6 +17,9 @@
 ; offset 10-11: pointer to stats for each of the 16x16 "objects" used for this boss. Eight bytes per object:
 ; * offset 1: elemental immunities
 ; * offset 2: weaknesses (see npc/stats.asm)
+; * offset 3: touch damage to player
+; * offset 4: defense to physical attacks
+; * offset 5: defense to magical attacks
 ; * offset 6: Status Effect on touch
 ; offset 12-13: attack movement pattern
 ; offset 14-15: spawn movement pattern

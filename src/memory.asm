@@ -1577,7 +1577,27 @@ wD8DA:
 
 ; Three bytes long
 wDualCharacterScratch:
-    ds 1829                                            ;; d8db
+    ds 3                                               ;; d8db
+
+ds 777 ; Free space
+
+; Number of script actions on stack
+wScriptActionCount:
+    ds 1
+
+; Script stack from tileScriptOrSpikeDamage
+; Set to 4 bytes times 8 entries. The likelihood of needing
+; more than 8 entries is incredibly low (or impossible) in
+; the base game. This number could be shrunk if more WRAM
+; is needed. Be sure to update enqueueScriptAction if this
+; stack size changes.
+; offset 0: triggering object facing direction
+; offset 1: triggering object collision flags
+; offset 2-3: script index
+wScriptActionStack:
+    ds 32
+
+ds 1016 ; Free space
 
 SECTION "hram", HRAM[$ff80]
 

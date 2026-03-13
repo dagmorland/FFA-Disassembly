@@ -3947,8 +3947,8 @@ tileScriptOrSpikeDamage:
     jr   .loop                                         ;; 00:1739 $18 $f4
 .break:
     ld   A, [HL+]                                      ;; 00:173b $2a
-    ld   H, [HL]                                       ;; 00:173c $66
-    ld   L, A                                          ;; 00:173d $6f
+    ld   D, [HL]
+    ld   E, A
     ld   A, B                                          ;; 00:173e $78
     call enqueueScriptAction
 .pop_bank_and_return:
@@ -6041,7 +6041,6 @@ roomScriptSetup:
     push HL
     call getPlayerDirection
     and  A, $0f
-    or   A, $00
     ld   C, $c9
     pop  HL
     ret
@@ -6051,14 +6050,14 @@ checkScriptActions:
     ld   A, [wMainGameStateFlags]
     bit  1, A
     ret  NZ
-    ld   A, [wScriptActionCount]
+    ld   HL, wScriptActionCount
+    ld   A, [HL]
     or   A, A
     jr   Z, .done_with_tile_scripts
     dec  A
     sla  A
     sla  A
     inc  A
-    ld   HL, wScriptActionCount
     dec  [HL]
     ld   D, 0
     ld   E, A
@@ -6078,26 +6077,44 @@ checkScriptActions:
 ; C: trigger collision flags
 ; HL: script index
 enqueueScriptAction:
-    ld   A, [wScriptActionCount]
-    cp   A, 8 ; set to the size of the stack
-    ret  nc ; not enough space
-    sla  A
-    sla  A
-    inc  A ; the stack is stored right after the size
-    push HL
     ld   HL, wScriptActionCount
-    inc  [HL]
+    push HL
+    ld   A, [HL]
+    cp   A, 18 ; set to the size of the stack
+    ret  NC ; not enough space
+    inc  A
+    sla  A
+    sla  A
+    push DE
     ld   D, 0
     ld   E, A
     add  HL, DE
     pop  DE
-    ld   [HL], B
-    inc  HL
-    ld   [HL], C
-    inc  HL
-    ld   [HL], D
-    inc  HL
     ld   [HL], E
+    dec  HL
+    ld   [HL], D
+    dec  HL
+    ld   [HL], C
+    dec  HL
+    ld   [HL], B
+    dec  HL
+    cp   A, 4 ; A only equals 4 if the queue was empty
+    jr   Z, .increment_count
+    ld   A, [HL-]
+    cp   A, E
+    jr   NZ, .increment_count
+    ld   A, [HL-]
+    cp   A, D
+    jr   NZ, .increment_count
+    ld   A, [HL-]
+    cp   A, C
+    jr   NZ, .increment_count
+    ld   A, [HL-]
+    cp   A, B
+    ret  Z
+.increment_count:
+    pop  HL
+    inc  [HL]
     ret
 
 ; A: number of script actions on the stack A>=1
@@ -6111,7 +6128,7 @@ startNextScriptAction:
     ld   D, 0
     ld   E, A
     add  HL, DE
-    ldi  A, [HL]
+    ld   A, [HL+]
     ld   C, [HL]
     inc  HL
     ld   E, [HL]
@@ -6125,18 +6142,14 @@ startNextScriptAction:
     ld   A, $05
     ld   [wTextSpeedTimer], A
     call getScriptPointerFromScriptPointerTable
-    ld   DE, $4000 ;@=value hex=True
-    add  HL, DE
     ld   A, H
+    add  A, $40
     ld   [wScriptPointerHigh], A
     ld   A, L
     ld   [wScriptPointerLow], A
     call popBankNrAndSwitch
     call getBankNrForScript
-    call getNextScriptInstruction
-    ret
-
-ds 13 ; free space
+    jp   getNextScriptInstruction
 
 ; A = YX tile location (Y in top nibble, X in bottom nibble)
 ; Return: HL pointer to the metatile in wRoomTiles

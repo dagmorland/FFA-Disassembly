@@ -1586,18 +1586,14 @@ wScriptActionCount:
     ds 1
 
 ; Script stack from tileScriptOrSpikeDamage
-; Set to 4 bytes times 8 entries. The likelihood of needing
-; more than 8 entries is incredibly low (or impossible) in
-; the base game. This number could be shrunk if more WRAM
-; is needed. Be sure to update enqueueScriptAction if this
-; stack size changes.
+; Set to 4 bytes times 18 entries (8 NPCs + 1 player)*2 possible tiles.
 ; offset 0: triggering object facing direction
 ; offset 1: triggering object collision flags
 ; offset 2-3: script index
 wScriptActionStack:
-    ds 32
+    ds 72
 
-ds 1016 ; Free space
+ds 976 ; Free space
 
 SECTION "hram", HRAM[$ff80]
 

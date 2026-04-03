@@ -6915,27 +6915,31 @@ HLandDE:
     or   A, H                                          ;; 00:29b8 $b4
     ret                                                ;; 00:29b9 $c9
 
+; This function snaps object C to the nearest 8px boundary.
+; It has been modified to check for tile interactions.
 snapObjectToNearestTile8:
-    push BC                                            ;; 00:29ba $c5
-    call GetObjectY                                    ;; 00:29bb $cd $3e $0c
-    call snapPositionToNearestTile8                    ;; 00:29be $cd $dc $29
-    pop  BC                                            ;; 00:29c1 $c1
-    ld   B, A                                          ;; 00:29c2 $47
-    push BC                                            ;; 00:29c3 $c5
-    call GetObjectX                                    ;; 00:29c4 $cd $2d $0c
-    call snapPositionToNearestTile8                    ;; 00:29c7 $cd $dc $29
-    pop  BC                                            ;; 00:29ca $c1
-    ld   E, A                                          ;; 00:29cb $5f
-    ld   D, B                                          ;; 00:29cc $50
-    push DE                                            ;; 00:29cd $d5
-    push BC                                            ;; 00:29ce $c5
-    call getObjectDirection                            ;; 00:29cf $cd $99 $0c
-    and  A, $0f                                        ;; 00:29d2 $e6 $0f
-    pop  BC                                            ;; 00:29d4 $c1
-    pop  DE                                            ;; 00:29d5 $d1
-    ld   B, $00                                        ;; 00:29d6 $06 $00
-    call updateObjectPosition                          ;; 00:29d8 $cd $11 $06
-    ret                                                ;; 00:29db $c9
+    push BC
+    call getObjectDirection
+    and  A, $0f
+    push AF
+    inc  HL
+    inc  HL
+    ld   A, [HL+]
+    inc  HL
+    ld   C, A
+    ld   A, [HL+]
+    call snapPositionToNearestTile8
+    ld   D, A
+    ld   A, [HL]
+    call snapPositionToNearestTile8
+    ld   E, A
+    pop  AF
+    push AF
+    call call_00_1815
+    pop  AF
+    pop  BC
+    ld   B, $00
+    jp   updateObjectPosition
 
 snapPositionToNearestTile8:
     and  A, $fc                                        ;; 00:29dc $e6 $fc

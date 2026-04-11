@@ -941,7 +941,7 @@ bossCollisionHandling:
     push DE                                            ;; 04:453b $d5
     ld   D, H                                          ;; 04:453c $54
     ld   E, L                                          ;; 04:453d $5d
-    call add25rndHLtoDE_4                              ;; 04:453e $cd $f6 $46
+    call add25rndDEtoHL_4                              ;; 04:453e $cd $f6 $46
     pop  DE                                            ;; 04:4541 $d1
     pop  BC                                            ;; 04:4542 $c1
     jp   Z, .immune                                    ;; 04:4543 $ca $54 $45
@@ -1193,7 +1193,7 @@ bossWeaponDamage:
     pop  HL                                            ;; 04:46ba $e1
     add  HL, DE                                        ;; 04:46bb $19
     pop  DE                                            ;; 04:46bc $d1
-    call add25rndHLtoDE_4                              ;; 04:46bd $cd $f6 $46
+    call add25rndDEtoHL_4                              ;; 04:46bd $cd $f6 $46
     ret                                                ;; 04:46c0 $c9
 .no_damage:
     ld   HL, $00                                       ;; 04:46c1 $21 $00 $00
@@ -1228,7 +1228,7 @@ bossSpellDamage:
     pop  HL                                            ;; 04:46ea $e1
     add  HL, DE                                        ;; 04:46eb $19
     pop  DE                                            ;; 04:46ec $d1
-    call add25rndHLtoDE_4                              ;; 04:46ed $cd $f6 $46
+    call add25rndDEtoHL_4                              ;; 04:46ed $cd $f6 $46
     ret                                                ;; 04:46f0 $c9
 .no_damage:
     ld   HL, $00                                       ;; 04:46f1 $21 $00 $00
@@ -1236,18 +1236,18 @@ bossSpellDamage:
     ret                                                ;; 04:46f5 $c9
 
 ; HL = HL + ((DE * RND()) >> 10)
-; Add 25% HL randomness to DE and store in HL
-add25rndHLtoDE_4:
+; Add 25% DE randomness to HL and store in HL
+add25rndDEtoHL_4:
     push HL                                            ;; 04:46f6 $e5
     push DE                                            ;; 04:46f7 $d5
     call getRandomByte                                 ;; 04:46f8 $cd $1e $2b
-    pop  HL                                            ;; 04:46fb $e1
+    pop  HL ; notice that this was DE on call          ;; 04:46fb $e1
     call MultiplyHL_by_A                               ;; 04:46fc $cd $7b $2b
     srl  H                                             ;; 04:46ff $cb $3c
     srl  H                                             ;; 04:4701 $cb $3c
     ld   L, H                                          ;; 04:4703 $6c
     ld   H, $00                                        ;; 04:4704 $26 $00
-    pop  DE                                            ;; 04:4706 $d1
+    pop  DE ; notice that this was HL on call          ;; 04:4706 $d1
     add  HL, DE                                        ;; 04:4707 $19
     ld   A, H                                          ;; 04:4708 $7c
     or   A, L                                          ;; 04:4709 $b5

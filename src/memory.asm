@@ -1577,7 +1577,23 @@ wD8DA:
 
 ; Three bytes long
 wDualCharacterScratch:
-    ds 1829                                            ;; d8db
+    ds 3                                               ;; d8db
+
+ds 777 ; Free space
+
+; Number of script actions on stack
+wScriptActionCount:
+    ds 1
+
+; Script stack from tileScriptOrSpikeDamage
+; Set to 4 bytes times 18 entries (8 NPCs + 1 player)*2 possible tiles.
+; offset 0: triggering object facing direction
+; offset 1: triggering object collision flags
+; offset 2-3: script index
+wScriptActionStack:
+    ds 72
+
+ds 976 ; Free space
 
 SECTION "hram", HRAM[$ff80]
 

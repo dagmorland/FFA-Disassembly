@@ -2965,11 +2965,11 @@ attackObjectFunction02:
     add  A, E                                          ;; 01:5453 $83
     ld   E, A                                          ;; 01:5454 $5f
     cp   A, $a1                                        ;; 01:5455 $fe $a1
-    jr   NC, .remove_attack_object
+    jr   NC, .remove_attack_object                     ;; 01:5457 $30 $53
     ld   A, [wVideoWY]                                 ;; 01:5459 $fa $a9 $c0
     add  A, $08                                        ;; 01:545c $c6 $08
     cp   A, D                                          ;; 01:545e $ba
-    jr   C, .remove_attack_object
+    jr   C, .remove_attack_object                      ;; 01:545f $38 $4b
     push HL                                            ;; 01:5461 $e5
     push DE                                            ;; 01:5462 $d5
     call getSelectedY                                  ;; 01:5463 $cd $14 $2f
@@ -2997,7 +2997,7 @@ attackObjectFunction02:
     res  7, A                                          ;; 01:5483 $cb $bf
 .jr_01_5485:
     call moveGridlessObject                            ;; 01:5485 $cd $d4 $08
-    jr   Z, .remove_attack_object
+    jr   Z, .remove_attack_object                      ;; 01:5488 $28 $22
     ld   A, [wSelectedObjectID]                        ;; 01:548a $fa $5a $cf
     ld   C, A                                          ;; 01:548d $4f
     ld   B, $00                                        ;; 01:548e $06 $00
@@ -3005,7 +3005,7 @@ attackObjectFunction02:
     add  HL, BC                                        ;; 01:5493 $09
     ld   A, [HL]                                       ;; 01:5494 $7e
     cp   A, $00                                        ;; 01:5495 $fe $00
-    jr   Z, .remove_attack_object
+    jr   Z, .remove_attack_object                      ;; 01:5497 $28 $13
     pop  HL                                            ;; 01:5499 $e1
     ld   A, [HL]                                       ;; 01:549a $7e
     call playerSpritesLoadAttackSpriteTiles            ;; 01:549b $cd $ea $59

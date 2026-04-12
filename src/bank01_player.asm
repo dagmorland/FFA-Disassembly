@@ -675,14 +675,14 @@ advanceScriptOpWhenVRAMCopiesDone:
 LoadMapEnd:
     push DE                                            ;; 01:448c $d5
     call getMainGameStateForPlayerForm                 ;; 01:448d $cd $cf $02
-    cp   A, $00                                        ;; 01:4490 $fe $00
-    jr   NZ, .jr_01_449b                               ;; 01:4492 $20 $07
-    ld   A, $c9                                        ;; 01:4494 $3e $c9
-    call setPlayerCollisionFlags                       ;; 01:4496 $cd $bd $02
-    ld   A, $00                                        ;; 01:4499 $3e $00
-.jr_01_449b:
-    call setScriptMainGameStateBackup                  ;; 01:449b $cd $8f $3e
-    ld   A, $00                                        ;; 01:449e $3e $00
+    ld   [wScriptMainGameStateBackup], A
+    or   A, A
+    jr   NZ, .clear_counters
+    ld   A, $c9
+    call setPlayerCollisionFlags
+.clear_counters:
+    ld   A, $00
+    ld   [wScriptActionCount], A
     ld   [wScriptOpCounter], A                         ;; 01:44a0 $ea $99 $d4
     pop  HL                                            ;; 01:44a3 $e1
     ret                                                ;; 01:44a4 $c9
@@ -2614,9 +2614,9 @@ attackTileChain:
     ld   [wMainGameStateFlags], A                      ;; 01:525e $ea $a1 $c0
     pop  AF                                            ;; 01:5261 $f1
     call setPlayerSpeed                                ;; 01:5262 $cd $a5 $02
-    ld   A, $00                                        ;; 01:5265 $3e $00
-    ld   C, $04                                        ;; 01:5267 $0e $04
-    call setObjectSliding                              ;; 01:5269 $cd $e4 $0c
+    xor A, A
+    call setPlayerSliding
+    call moveFollowerToPlayer
     ret                                                ;; 01:526c $c9
 
 attackTileMattok:
@@ -5264,16 +5264,20 @@ data_01_678f:
     dw   data_01_6ce4, data_01_6d13, data_01_6d42, data_01_6d71 ;; 01:67a9 ????????
     dw   data_01_6ce4, data_01_6d13, data_01_6d42, data_01_6d71 ;; 01:67b1 ????????
 
+; Updated object ID to match code expectations for secondary object destruction
+; in attackObjectFunction02.remove_attack_object. Now follows same pattern as Lit.
 attackSpearFrame1:
-    db   $04, $48, $02, $06, $09, $00                  ;; 01:67b9 ??????
+    db   $04, $48, $02, $05, $09, $00
     dw   data_08_7360, data_01_696f                    ;; 01:67bf ????
     dw   data_01_6e5c, data_01_6e7b, data_01_6e9a, data_01_6eb9 ;; 01:67c3 ????????
     dw   data_01_6e5c, data_01_6e7b, data_01_6e9a, data_01_6eb9 ;; 01:67cb ????????
     dw   data_01_6ed8, data_01_6ee7, data_01_6ef6, data_01_6f05 ;; 01:67d3 ????????
     dw   data_01_6ed8, data_01_6ee7, data_01_6ef6, data_01_6f05 ;; 01:67db ????????
 
+; Updated object ID to match code expectations for secondary object destruction
+; in attackObjectFunction02.remove_attack_object. Now follows same pattern as Lit.
 attackSpearFrame2:
-    db   $04, $40, $03, $05, $ff, $00                  ;; 01:67e3 ??????
+    db   $04, $40, $03, $03, $ff, $00
     dw   data_08_7360, data_01_6993                    ;; 01:67e9 ????
     dw   data_01_69a1, data_01_69b0, data_01_69bf, data_01_69ce ;; 01:67ed ????????
     dw   data_01_69a1, data_01_69b0, data_01_69bf, data_01_69ce ;; 01:67f5 ????????

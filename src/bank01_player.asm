@@ -4712,7 +4712,7 @@ attackFrames:
     dw   $0000                                         ;; 01:5e41 ?? $12
     dw   data_01_66bd                                  ;; 01:5e43 ?? $13
     dw   data_01_678f                                  ;; 01:5e45 ?? $14
-    dw   data_01_67e3                                  ;; 01:5e47 ?? $15
+    dw   attackSpearFrame2                             ;; 01:5e47 ?? $15
     dw   data_01_6711                                  ;; 01:5e49 ?? $16
     dw   $0000                                         ;; 01:5e4b ?? $17
     dw   data_01_62cd                                  ;; 01:5e4d pP $18
@@ -5268,7 +5268,7 @@ data_01_678f:
 ; in attackObjectFunction02.remove_attack_object. Now follows same pattern as Lit.
 attackSpearFrame1:
     db   $04, $48, $02, $05, $09, $00
-    dw   gfxAttackSpear, data_01_696f
+    dw   data_08_7360, data_01_696f                    ;; 01:67bf ????
     dw   data_01_6e5c, data_01_6e7b, data_01_6e9a, data_01_6eb9 ;; 01:67c3 ????????
     dw   data_01_6e5c, data_01_6e7b, data_01_6e9a, data_01_6eb9 ;; 01:67cb ????????
     dw   data_01_6ed8, data_01_6ee7, data_01_6ef6, data_01_6f05 ;; 01:67d3 ????????
@@ -5278,7 +5278,7 @@ attackSpearFrame1:
 ; in attackObjectFunction02.remove_attack_object. Now follows same pattern as Lit.
 attackSpearFrame2:
     db   $04, $40, $03, $03, $ff, $00
-    dw   gfxAttackSpear, data_01_6993
+    dw   data_08_7360, data_01_6993                    ;; 01:67e9 ????
     dw   data_01_69a1, data_01_69b0, data_01_69bf, data_01_69ce ;; 01:67ed ????????
     dw   data_01_69a1, data_01_69b0, data_01_69bf, data_01_69ce ;; 01:67f5 ????????
     dw   data_01_6f14, data_01_6f1b, data_01_6f22, data_01_6f29 ;; 01:67fd ????????

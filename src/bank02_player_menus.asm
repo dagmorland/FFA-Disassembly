@@ -6501,29 +6501,54 @@ loadSRAMInitGame:
     ld   A, [wOpenChestScript1._3]                     ;; 02:73ae $fa $16 $d6
     ld   E, A                                          ;; 02:73b1 $5f
     ld   A, [wScriptFlags0B]                           ;; 02:73b2 $fa $d1 $d7
-    ld   B, A                                          ;; 02:73b5 $47
-    rlc  B                                             ;; 02:73b6 $cb $00
-    ld   A, [wScriptFlags0A]                           ;; 02:73b8 $fa $d0 $d7
-    rla                                                ;; 02:73bb $17
-    and  A, A                                          ;; 02:73bc $a7
-    jr   Z, .jr_02_73f1                                ;; 02:73bd $28 $32
-    push DE                                            ;; 02:73bf $d5
-    ld   DE, .followerInitArgs                         ;; 02:73c0 $11 $06 $74
-    ld   B, $07                                        ;; 02:73c3 $06 $07
+    rla
+    ld   A, [wScriptFlags0A]
+    rla
+    and  A, A
+    jr   Z, .jr_02_73f1
+    push DE
+    ld   DE, .followerInitArgs+3
+    rra
+    jr   C, .choco_follower
 .loop_3:
-    rlca                                               ;; 02:73c5 $07
-    jr   C, .jr_02_73d8                                ;; 02:73c6 $38 $10
-    inc  DE                                            ;; 02:73c8 $13
-    inc  DE                                            ;; 02:73c9 $13
-    inc  DE                                            ;; 02:73ca $13
-    dec  B                                             ;; 02:73cb $05
-    jr   NZ, .loop_3                                   ;; 02:73cc $20 $f7
-    ld   A, [wScriptFlags04]                           ;; 02:73ce $fa $ca $d7
-    bit  6, A                                          ;; 02:73d1 $cb $77
-    jr   NZ, .jr_02_73d8                               ;; 02:73d3 $20 $03
-    inc  DE                                            ;; 02:73d5 $13
-    inc  DE                                            ;; 02:73d6 $13
-    inc  DE                                            ;; 02:73d7 $13
+    inc  DE
+    inc  DE
+    inc  DE
+    rra
+    jr   C, .jr_02_73d8
+    jr   .loop_3
+.choco_follower:
+    ld   A, [wScriptFlags04]
+    bit  6, A
+    jr   Z, .jr_02_73d8
+    dec  DE
+    dec  DE
+    dec  DE
+    nop
+    nop
+;    ld   B, A                                          ;; 02:73b5 $47
+;    rlc  B                                             ;; 02:73b6 $cb $00
+;    ld   A, [wScriptFlags0A]                           ;; 02:73b8 $fa $d0 $d7
+;    rla                                                ;; 02:73bb $17
+;    and  A, A                                          ;; 02:73bc $a7
+;    jr   Z, .jr_02_73f1                                ;; 02:73bd $28 $32
+;    push DE                                            ;; 02:73bf $d5
+;    ld   DE, .followerInitArgs                         ;; 02:73c0 $11 $06 $74
+;    ld   B, $07                                        ;; 02:73c3 $06 $07
+;.loop_3:
+;    rlca                                               ;; 02:73c5 $07
+;    jr   C, .jr_02_73d8                                ;; 02:73c6 $38 $10
+;    inc  DE                                            ;; 02:73c8 $13
+;    inc  DE                                            ;; 02:73c9 $13
+;    inc  DE                                            ;; 02:73ca $13
+;    dec  B                                             ;; 02:73cb $05
+;    jr   NZ, .loop_3                                   ;; 02:73cc $20 $f7
+;    ld   A, [wScriptFlags04]                           ;; 02:73ce $fa $ca $d7
+;    bit  6, A                                          ;; 02:73d1 $cb $77
+;    jr   NZ, .jr_02_73d8                               ;; 02:73d3 $20 $03
+;    inc  DE                                            ;; 02:73d5 $13
+;    inc  DE                                            ;; 02:73d6 $13
+;    inc  DE                                            ;; 02:73d7 $13
 ; $fc = scriptOpCodeSetNPCTypes
 .jr_02_73d8:
     ld   A, $fc                                        ;; 02:73d8 $3e $fc
@@ -6568,10 +6593,14 @@ loadSRAMInitGame:
     call runScriptByIndex                              ;; 02:7402 $cd $ad $31
     ret                                                ;; 02:7405 $c9
 .followerInitArgs:
-    db   $32, $01, $01, $4d, $00, $02, $4e, $02        ;; 02:7406 ????????
-    db   $03, $4f, $00, $04, $51, $00, $05, $41        ;; 02:740e ????????
-    db   $02, $06, $52, $00, $07, $65, $00, $08        ;; 02:7416 ????????
-    db   $50, $01, $09                                 ;; 02:741e ???
+    db   $65, $00, $08, $50, $01, $09, $52, $00        ;; 02:7406 ????????
+    db   $07, $41, $02, $06, $51, $00, $05, $4f        ;; 02:740e ????????
+    db   $00, $04, $4e, $02, $03, $4d, $00, $02        ;; 02:7416 ????????
+    db   $32, $01, $01                                 ;; 02:741e ???
+;    db   $32, $01, $01, $4d, $00, $02, $4e, $02        ;; 02:7406 ????????
+;    db   $03, $4f, $00, $04, $51, $00, $05, $41        ;; 02:740e ????????
+;    db   $02, $06, $52, $00, $07, $65, $00, $08        ;; 02:7416 ????????
+;    db   $50, $01, $09                                 ;; 02:741e ???
 
 call_02_7421:
     call NOOP_2                                        ;; 02:7421 $cd $ae $77

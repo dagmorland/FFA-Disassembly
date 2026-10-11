@@ -1581,17 +1581,14 @@ wDualCharacterScratch:
 
 ds 777 ; Free space
 
-; Number of script actions on stack
-wScriptActionCount:
-    ds 1
-
 ; Script stack from tileScriptOrSpikeDamage
-; Set to 4 bytes times 18 entries (8 NPCs + 1 player)*2 possible tiles.
+; First byte is the number of script actions on the stack
+; Remainder is 4 bytes times 18 entries (8 NPCs + 1 player)*2 possible tiles.
 ; offset 0: triggering object facing direction
 ; offset 1: triggering object collision flags
 ; offset 2-3: script index
 wScriptActionStack:
-    ds 72
+    ds 73
 
 ds 976 ; Free space
 

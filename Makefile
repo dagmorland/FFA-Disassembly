@@ -14,6 +14,7 @@ clean:
 $(ROM): $(patsubst src/%.asm,.obj/%.o,$(SRCS))
 	@mkdir -p $(@D)
 	rgblink -w -m $(basename $@).map -n $(basename $@).sym -o $@ $^
+	rgbfix -f hg $@
 
 .obj/%.o $(DEPDIR)/%.mk: src/%.asm $(patsubst gfx/%.png,.gfx/%.bin,$(GFXS))
 	@mkdir -p $(dir .obj/$* .dep/$*)

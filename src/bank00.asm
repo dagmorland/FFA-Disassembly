@@ -118,13 +118,13 @@ entry:
 
 Header:
     INCBIN "ffa.gb", $0104, 48 ; Nintendo logo         ;; 00:0104
-    INCBIN "ffa.gb", $0134, 15 ; title                 ;; 00:0134
+    db   "FFA------>RAIAR"                             ;; 00:0134
     db   CART_COMPATIBLE_DMG                           ;; 00:0143
     db   $00, $00                                      ;; 00:0144 ??
     db   CART_INDICATOR_GB                             ;; 00:0146
     db   CART_ROM_MBC2_BAT, CART_ROM_256KB, CART_SRAM_NONE ;; 00:0147
     INCBIN "ffa.gb", $014a, 3 ; manufacturer info      ;; 00:014a
-    INCBIN "ffa.gb", $014d, 3 ; checksums              ;; 00:014d
+    ds   3                                             ;; 00:014d
 
 SECTION "bank00_0150", ROM0[$0150]
 
